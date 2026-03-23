@@ -1409,7 +1409,7 @@ function todayStr(){ return new Date().toISOString().split('T')[0]; }
 function timeToMin(t){
   if(!t) return 0;
   // Remove any non-ASCII digits (Arabic numerals etc) and parse safely
-  const clean = String(t).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)).trim();
+  const clean = String(t).replace(/[٠-٩]/g, d => '٠١٢٣٤٥٦٧٨٩'.indexOf(d)
   const parts = clean.split(':');
   const h = parseInt(parts[0]) || 0;
   const m = parseInt(parts[1]) || 0;
