@@ -1,0 +1,27 @@
+{
+  "name": "نظام الحضور والانصراف",
+  "short_name": "الحضور",
+  "description": "نظام متكامل لإدارة حضور وانصراف الموظفين",
+  "start_url": "/attendance-system/",
+  "scope": "/attendance-system/",
+  "display": "standalone",
+  "background_color": "#070b14",
+  "theme_color": "#070b14",
+  "orientation": "portrait-primary",
+  "lang": "ar",
+  "dir": "rtl",
+  "icons": [
+    {
+      "src": "icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
