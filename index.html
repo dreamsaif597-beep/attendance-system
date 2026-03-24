@@ -1206,14 +1206,26 @@ async function refreshFromSheets(silent=false) {
   try {
     const data = await api('loadAll');
     // Only update if we got real data back (not empty)
-    const hasData = (data.employees && data.employees.length > 0) ||
-                    (data.attendance && data.attendance.length > 0) ||
-                    (data.settings && data.settings.deductPerMin);
-    if(hasData || !silent){
-      sheetsToDB(data);
-      saveDB(); // cache the fresh data
+    const hasEmployees = data.employees && data.employees.length > 0;
+    const hasAttendance = data.attendance && data.attendance.length > 0;
+    const hasSettings = data.settings && Object.keys(data.settings).length > 0;
+    const hasData = hasEmployees || hasAttendance || hasSettings;
+
+    if(hasData){
+      // Merge: keep existing attendance if sheets returned empty attendance
+      if(!hasAttendance && DB.attendance && DB.attendance.length > 0){
+        const existingAtt = DB.attendance;
+        sheetsToDB(data);
+        DB.attendance = existingAtt;
+      } else {
+        sheetsToDB(data);
+      }
+      saveDB();
     }
-    if(!silent) showNotif('✅ تم تحديث البيانات', 'success');
+    if(!silent){
+      if(hasData) showNotif('✅ تم تحديث البيانات', 'success');
+      else showNotif('⚠️ الشيت فارغ، تم الإبقاء على البيانات المحلية', 'info');
+    }
   } catch(e) {
     if(!silent) showNotif('⚠️ تعذر الاتصال، البيانات من الكاش', 'info');
   } finally {
