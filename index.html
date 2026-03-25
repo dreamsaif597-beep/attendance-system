@@ -1121,13 +1121,25 @@ function hideLoading(){
 function formatSheetTime(t){
   if(!t) return '';
   if(t instanceof Date){
-    const h = String(t.getHours()).padStart(2,'0');
-    const m = String(t.getMinutes()).padStart(2,'0');
-    return h+':'+m;
+    // Use UTC hours/minutes to avoid timezone offset issues
+    // Google Sheets stores times as dates starting from Dec 30, 1899
+    const totalMins = Math.round((t - new Date(1899,11,30)) / 60000);
+    const h = Math.floor(totalMins / 60) % 24;
+    const m = totalMins % 60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
   }
   const s = String(t).trim();
-  const match = s.match(/(\d{1,2}):(\d{2})/);
-  if(match) return String(match[1]).padStart(2,'0')+':'+match[2];
+  // Handle format like "8:00:00 AM" or "08:00"
+  const ampm = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+  if(ampm){
+    let h = parseInt(ampm[1]);
+    const m = ampm[2];
+    if(ampm[3]){
+      if(ampm[3].toUpperCase()==='PM' && h<12) h+=12;
+      if(ampm[3].toUpperCase()==='AM' && h===12) h=0;
+    }
+    return String(h).padStart(2,'0')+':'+m;
+  }
   return s;
 }
 
@@ -1795,13 +1807,12 @@ function render_mgr_attendance(el){
   el.innerHTML = `
     <div class="ph">
       <div><div class="ph-title">📋 سجل الحضور</div><div class="ph-sub">تاريخ جميع سجلات الدخول والخروج</div></div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <input type="date" id="att-filter-date" value="" style="width:auto;padding:7px 12px;" onchange="renderAttTable()" />
+      <div style="display:flex;gap:8px;">
+        <input type="date" id="att-filter-date" value="${todayStr()}" style="width:auto;padding:7px 12px;" onchange="renderAttTable()" />
         <select id="att-filter-emp" style="width:auto;padding:7px 12px;" onchange="renderAttTable()">
           <option value="">كل الموظفين</option>
           ${DB.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}
         </select>
-        <button class="btn btn-ghost btn-sm" onclick="document.getElementById('att-filter-date').value='';document.getElementById('att-filter-emp').value='';renderAttTable()">مسح</button>
       </div>
     </div>
     <div class="card">
