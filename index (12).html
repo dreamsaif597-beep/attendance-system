@@ -1,0 +1,3566 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>نظام الحضور والانصراف</title>
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#070b14">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="الحضور">
+<link rel="apple-touch-icon" href="icon.png">
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root {
+  --bg: #070b14;
+  --surface: #0d1424;
+  --card: #111c2e;
+  --card2: #162238;
+  --border: #1e2e48;
+  --border2: #253650;
+  --accent: #3b82f6;
+  --accent2: #60a5fa;
+  --accent-glow: rgba(59,130,246,0.25);
+  --gold: #f59e0b;
+  --gold-light: #fbbf24;
+  --success: #10b981;
+  --danger: #ef4444;
+  --warning: #f59e0b;
+  --purple: #8b5cf6;
+  --text: #e2e8f0;
+  --text2: #94a3b8;
+  --text3: #64748b;
+  --shadow: 0 4px 24px rgba(0,0,0,0.4);
+  --glow-blue: 0 0 24px rgba(59,130,246,0.2);
+  --radius: 14px;
+}
+
+*{margin:0;padding:0;box-sizing:border-box;}
+html{font-size:14px;}
+body{
+  font-family:'Cairo',sans-serif;
+  background:var(--bg);
+  color:var(--text);
+  min-height:100vh;
+  overflow-x:hidden;
+}
+
+body::after{
+  content:'';position:fixed;inset:0;
+  background:radial-gradient(ellipse 60% 40% at 70% 10%, rgba(59,130,246,0.06) 0%, transparent 60%),
+             radial-gradient(ellipse 40% 30% at 10% 80%, rgba(139,92,246,0.04) 0%, transparent 50%);
+  pointer-events:none;z-index:0;
+}
+
+/* ===== LOGIN SCREEN ===== */
+#login-screen{
+  position:fixed;inset:0;
+  display:flex;align-items:center;justify-content:center;
+  background:var(--bg);z-index:1000;
+  flex-direction:column;gap:32px;
+}
+
+.login-logo{
+  display:flex;align-items:center;gap:14px;
+  font-size:1.6rem;font-weight:900;
+  color:var(--text);
+}
+
+.login-logo-icon{
+  width:52px;height:52px;
+  background:linear-gradient(135deg,#1d4ed8,var(--accent));
+  border-radius:14px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.6rem;
+  box-shadow:0 0 30px rgba(59,130,246,0.4);
+}
+
+.login-cards{
+  display:flex;gap:20px;
+  flex-wrap:wrap;justify-content:center;
+}
+
+.login-card{
+  width:220px;
+  background:var(--card);
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  padding:28px 24px;
+  cursor:pointer;
+  transition:all 0.3s;
+  text-align:center;
+  position:relative;
+  overflow:hidden;
+}
+
+.login-card::before{
+  content:'';position:absolute;inset:0;
+  opacity:0;transition:opacity 0.3s;
+}
+
+.login-card.manager::before{background:linear-gradient(135deg,rgba(59,130,246,0.08),rgba(139,92,246,0.08));}
+.login-card.employee::before{background:linear-gradient(135deg,rgba(16,185,129,0.08),rgba(5,150,105,0.08));}
+
+.login-card:hover{transform:translateY(-4px);border-color:var(--accent);}
+.login-card:hover::before{opacity:1;}
+.login-card.manager:hover{box-shadow:0 8px 40px rgba(59,130,246,0.2);}
+.login-card.employee:hover{box-shadow:0 8px 40px rgba(16,185,129,0.2);}
+
+.login-card-icon{font-size:2.4rem;margin-bottom:12px;}
+.login-card-title{font-size:1rem;font-weight:800;margin-bottom:6px;}
+.login-card-sub{font-size:0.78rem;color:var(--text3);line-height:1.5;}
+
+.emp-select-wrap{display:none;flex-direction:column;gap:12px;align-items:center;width:280px;}
+.emp-select-wrap.visible{display:flex;}
+
+.emp-select-wrap select{
+  width:100%;padding:10px 14px;
+  background:var(--card);border:1px solid var(--border);
+  border-radius:10px;color:var(--text);
+  font-family:'Cairo',sans-serif;font-size:0.9rem;
+  outline:none;
+}
+
+/* ===== APP ===== */
+#app{display:none;position:relative;z-index:1;min-height:100vh;}
+
+/* TOPBAR */
+.topbar{
+  height:58px;
+  background:rgba(13,20,36,0.95);
+  border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  padding:0 20px;
+  position:sticky;top:0;z-index:100;
+  backdrop-filter:blur(12px);
+}
+
+.topbar-logo{
+  display:flex;align-items:center;gap:10px;
+  font-weight:900;font-size:1rem;color:var(--accent2);
+}
+
+.topbar-logo-icon{
+  width:32px;height:32px;
+  background:linear-gradient(135deg,#1d4ed8,var(--accent));
+  border-radius:8px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1rem;
+}
+
+.topbar-right{display:flex;align-items:center;gap:14px;}
+
+.topbar-user{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(255,255,255,0.04);
+  border:1px solid var(--border);
+  border-radius:10px;
+  padding:5px 12px;
+  font-size:0.82rem;font-weight:700;
+}
+
+.user-avatar{
+  width:26px;height:26px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;
+  font-size:0.72rem;font-weight:800;
+  flex-shrink:0;
+}
+
+.live-dot{
+  width:7px;height:7px;border-radius:50%;
+  background:var(--success);
+  animation:blink 1.4s infinite;
+  display:inline-block;
+}
+
+@keyframes blink{0%,100%{opacity:1;}50%{opacity:0.3;}}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.topbar-clock{font-size:0.88rem;font-weight:800;color:var(--accent2);letter-spacing:1px;font-variant-numeric:tabular-nums;}
+
+.btn-logout{
+  padding:6px 12px;border:1px solid var(--border);border-radius:8px;
+  background:none;color:var(--text3);cursor:pointer;font-family:'Cairo',sans-serif;
+  font-size:0.78rem;font-weight:700;transition:all 0.2s;
+}
+.btn-logout:hover{border-color:var(--danger);color:var(--danger);}
+
+/* LAYOUT */
+.app-layout{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 58px);}
+
+/* SIDEBAR */
+.sidebar{
+  background:var(--surface);
+  border-left:1px solid var(--border);
+  padding:16px 0;
+  display:flex;flex-direction:column;
+  position:sticky;top:58px;height:calc(100vh - 58px);
+  overflow-y:auto;
+}
+
+.sidebar-section-label{
+  padding:6px 16px 3px;
+  font-size:0.65rem;color:var(--text3);
+  font-weight:800;letter-spacing:1.5px;
+  text-transform:uppercase;margin-top:8px;
+}
+
+.nav-item{
+  display:flex;align-items:center;gap:10px;
+  padding:9px 16px;cursor:pointer;
+  font-size:0.83rem;color:var(--text2);
+  border-right:3px solid transparent;
+  transition:all 0.2s;font-weight:600;
+  user-select:none;
+}
+
+.nav-item:hover{background:rgba(59,130,246,0.06);color:var(--text);}
+
+.nav-item.active{
+  background:rgba(59,130,246,0.1);
+  color:var(--accent2);
+  border-right-color:var(--accent);
+}
+
+.nav-item .n-icon{width:20px;text-align:center;font-size:1rem;}
+
+.nav-badge{
+  margin-right:auto;background:var(--accent);
+  color:white;border-radius:10px;
+  padding:1px 7px;font-size:0.68rem;font-weight:800;
+}
+
+.nav-badge.gold{background:var(--gold);}
+.nav-badge.red{background:var(--danger);}
+
+/* CONTENT */
+.content{padding:20px;overflow-y:auto;max-height:calc(100vh - 58px);}
+
+.page{display:none;animation:fadeIn 0.25s ease;}
+.page.active{display:block;}
+
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px);}to{opacity:1;transform:none;}}
+
+/* PAGE HEADER */
+.ph{
+  display:flex;align-items:flex-start;justify-content:space-between;
+  margin-bottom:20px;flex-wrap:wrap;gap:12px;
+}
+
+.ph-title{font-size:1.4rem;font-weight:900;line-height:1.1;}
+.ph-sub{font-size:0.78rem;color:var(--text3);margin-top:3px;font-weight:500;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:14px;margin-bottom:20px;}
+
+.stat-card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px 18px;
+  transition:transform 0.2s;position:relative;overflow:hidden;
+}
+
+.stat-card:hover{transform:translateY(-2px);}
+
+.stat-card::after{
+  content:'';position:absolute;
+  top:-20px;right:-20px;
+  width:70px;height:70px;border-radius:50%;
+  opacity:0.07;
+}
+
+.sc-blue::after{background:var(--accent);}
+.sc-green::after{background:var(--success);}
+.sc-red::after{background:var(--danger);}
+.sc-gold::after{background:var(--gold);}
+.sc-purple::after{background:var(--purple);}
+
+.sc-icon{
+  width:38px;height:38px;border-radius:10px;
+  display:flex;align-items:center;justify-content:center;
+  font-size:1.1rem;margin-bottom:10px;
+}
+
+.sc-blue .sc-icon{background:rgba(59,130,246,0.12);}
+.sc-green .sc-icon{background:rgba(16,185,129,0.12);}
+.sc-red .sc-icon{background:rgba(239,68,68,0.12);}
+.sc-gold .sc-icon{background:rgba(245,158,11,0.12);}
+.sc-purple .sc-icon{background:rgba(139,92,246,0.12);}
+
+.sc-value{font-size:1.8rem;font-weight:900;line-height:1;}
+.sc-blue .sc-value{color:var(--accent2);}
+.sc-green .sc-value{color:var(--success);}
+.sc-red .sc-value{color:var(--danger);}
+.sc-gold .sc-value{color:var(--gold-light);}
+.sc-purple .sc-value{color:#a78bfa;}
+
+.sc-label{font-size:0.75rem;color:var(--text3);font-weight:600;margin-top:2px;}
+
+/* CARDS */
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);overflow:hidden;
+  margin-bottom:16px;
+}
+
+.card-header{
+  padding:14px 18px;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+  gap:10px;
+}
+
+.card-title{font-weight:800;font-size:0.9rem;}
+.card-body{padding:16px 18px;}
+
+/* TABLE */
+.tbl-wrap{overflow-x:auto;}
+
+table{width:100%;border-collapse:collapse;}
+
+th{
+  background:rgba(0,0,0,0.25);
+  padding:9px 14px;
+  font-size:0.7rem;color:var(--text3);
+  font-weight:800;text-align:right;
+  letter-spacing:0.5px;text-transform:uppercase;
+  white-space:nowrap;
+}
+
+td{
+  padding:11px 14px;font-size:0.82rem;
+  border-bottom:1px solid rgba(255,255,255,0.03);
+  vertical-align:middle;
+}
+
+tr:last-child td{border-bottom:none;}
+tr:hover td{background:rgba(255,255,255,0.015);}
+
+/* BADGES */
+.badge{
+  padding:3px 9px;border-radius:20px;
+  font-size:0.7rem;font-weight:700;
+  display:inline-block;white-space:nowrap;
+}
+
+.b-green{background:rgba(16,185,129,0.1);color:var(--success);border:1px solid rgba(16,185,129,0.2);}
+.b-red{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.2);}
+.b-gold{background:rgba(245,158,11,0.1);color:var(--gold-light);border:1px solid rgba(245,158,11,0.2);}
+.b-blue{background:rgba(59,130,246,0.1);color:var(--accent2);border:1px solid rgba(59,130,246,0.2);}
+.b-purple{background:rgba(139,92,246,0.1);color:#a78bfa;border:1px solid rgba(139,92,246,0.2);}
+.b-gray{background:rgba(255,255,255,0.06);color:var(--text3);border:1px solid var(--border);}
+
+/* AVATAR */
+.av{
+  width:30px;height:30px;border-radius:50%;
+  display:inline-flex;align-items:center;justify-content:center;
+  font-size:0.75rem;font-weight:800;flex-shrink:0;
+}
+
+.emp-cell{display:flex;align-items:center;gap:8px;}
+.emp-cell-info .name{font-weight:700;}
+.emp-cell-info .sub{font-size:0.7rem;color:var(--text3);}
+
+/* BUTTONS */
+.btn{
+  padding:8px 18px;border-radius:9px;border:none;
+  cursor:pointer;font-family:'Cairo',sans-serif;
+  font-weight:700;font-size:0.82rem;
+  transition:all 0.2s;display:inline-flex;
+  align-items:center;gap:6px;white-space:nowrap;
+}
+
+.btn-primary{
+  background:linear-gradient(135deg,#1d4ed8,var(--accent));
+  color:white;box-shadow:0 3px 12px rgba(59,130,246,0.3);
+}
+.btn-primary:hover{transform:translateY(-1px);box-shadow:0 5px 18px rgba(59,130,246,0.4);}
+
+.btn-success{background:rgba(16,185,129,0.12);color:var(--success);border:1px solid rgba(16,185,129,0.3);}
+.btn-success:hover{background:rgba(16,185,129,0.2);}
+
+.btn-danger{background:rgba(239,68,68,0.1);color:var(--danger);border:1px solid rgba(239,68,68,0.3);}
+.btn-danger:hover{background:rgba(239,68,68,0.18);}
+
+.btn-gold{background:rgba(245,158,11,0.12);color:var(--gold-light);border:1px solid rgba(245,158,11,0.3);}
+.btn-gold:hover{background:rgba(245,158,11,0.2);}
+
+.btn-ghost{background:rgba(255,255,255,0.04);color:var(--text2);border:1px solid var(--border);}
+.btn-ghost:hover{background:rgba(255,255,255,0.07);color:var(--text);}
+
+.btn-sm{padding:5px 12px;font-size:0.75rem;}
+
+/* FORMS */
+.fg{margin-bottom:14px;}
+label{display:block;font-size:0.75rem;font-weight:700;color:var(--text3);margin-bottom:5px;letter-spacing:0.3px;}
+
+input,select,textarea{
+  width:100%;
+  background:rgba(0,0,0,0.3);
+  border:1px solid var(--border);
+  border-radius:9px;padding:9px 13px;
+  color:var(--text);font-family:'Cairo',sans-serif;
+  font-size:0.85rem;outline:none;
+  transition:border-color 0.2s;direction:rtl;
+}
+
+input:focus,select:focus,textarea:focus{border-color:var(--accent);}
+textarea{resize:vertical;min-height:70px;}
+
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;}
+.form-grid.g3{grid-template-columns:1fr 1fr 1fr;}
+.form-full{grid-column:1/-1;}
+
+/* MODAL */
+.modal-overlay{
+  position:fixed;inset:0;
+  background:rgba(0,0,0,0.75);
+  backdrop-filter:blur(6px);
+  z-index:500;display:none;
+  align-items:center;justify-content:center;
+  padding:20px;
+}
+.modal-overlay.open{display:flex;}
+
+.modal{
+  background:var(--card);
+  border:1px solid var(--border2);
+  border-radius:18px;padding:24px;
+  width:540px;max-width:100%;
+  animation:modalIn 0.25s ease;
+  max-height:90vh;overflow-y:auto;
+}
+
+@keyframes modalIn{from{transform:scale(0.94) translateY(20px);opacity:0;}to{transform:none;opacity:1;}}
+
+.modal-header{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:18px;
+}
+.modal-title{font-size:1rem;font-weight:800;}
+.close-btn{background:none;border:none;cursor:pointer;color:var(--text3);font-size:1.2rem;transition:color 0.2s;padding:2px;}
+.close-btn:hover{color:var(--text);}
+
+/* NOTIFICATION */
+.notif{
+  position:fixed;top:70px;left:50%;transform:translateX(-50%) translateY(-20px);
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:12px;padding:12px 22px;
+  display:flex;align-items:center;gap:10px;
+  z-index:900;font-weight:700;font-size:0.88rem;
+  box-shadow:var(--shadow);
+  opacity:0;pointer-events:none;
+  transition:all 0.3s;
+  max-width:400px;
+}
+.notif.show{opacity:1;transform:translateX(-50%) translateY(0);}
+.notif.n-success{border-color:var(--success);}
+.notif.n-danger{border-color:var(--danger);}
+.notif.n-gold{border-color:var(--gold);}
+.notif.n-info{border-color:var(--accent);}
+
+/* ALERT */
+.alert{padding:11px 14px;border-radius:9px;font-size:0.82rem;font-weight:600;display:flex;align-items:center;gap:8px;margin-bottom:12px;}
+.a-warn{background:rgba(245,158,11,0.08);border:1px solid rgba(245,158,11,0.25);color:var(--gold-light);}
+.a-info{background:rgba(59,130,246,0.07);border:1px solid rgba(59,130,246,0.2);color:var(--accent2);}
+.a-green{background:rgba(16,185,129,0.07);border:1px solid rgba(16,185,129,0.2);color:var(--success);}
+
+/* PROGRESS */
+.prog{background:rgba(255,255,255,0.05);border-radius:6px;height:7px;overflow:hidden;}
+.prog-fill{height:100%;border-radius:6px;transition:width 0.7s ease;}
+
+/* TABS */
+.tabs{display:flex;gap:2px;background:rgba(0,0,0,0.25);border-radius:10px;padding:3px;margin-bottom:16px;width:fit-content;}
+.tab{
+  padding:7px 16px;border-radius:8px;cursor:pointer;
+  font-size:0.8rem;font-weight:700;color:var(--text3);
+  transition:all 0.2s;
+}
+.tab.active{background:var(--card2);color:var(--accent2);}
+
+/* SHIFT BADGE */
+.shift-tag{
+  display:inline-flex;align-items:center;gap:4px;
+  padding:2px 8px;border-radius:6px;font-size:0.7rem;font-weight:700;
+}
+.st-1{background:rgba(59,130,246,0.1);color:var(--accent2);}
+.st-2{background:rgba(139,92,246,0.1);color:#a78bfa;}
+
+/* CLOCK WIDGET */
+.clock-widget{
+  background:linear-gradient(135deg,var(--card),var(--card2));
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px 24px;text-align:center;
+  margin-bottom:16px;
+}
+.cw-time{font-size:2.4rem;font-weight:900;color:var(--accent2);letter-spacing:2px;font-variant-numeric:tabular-nums;text-shadow:0 0 30px rgba(59,130,246,0.3);}
+.cw-date{font-size:0.85rem;color:var(--text2);margin-top:4px;font-weight:600;}
+.cw-shift{font-size:0.78rem;margin-top:6px;}
+
+/* SCAN AREA */
+.scan-area{
+  width:140px;height:170px;
+  background:linear-gradient(180deg,#0d1a30,#091020);
+  border:2px solid var(--border);
+  border-radius:14px;margin:0 auto;
+  display:flex;align-items:center;justify-content:center;
+  cursor:pointer;position:relative;overflow:hidden;
+  transition:all 0.3s;
+}
+.scan-area:hover{border-color:var(--accent);}
+.scan-area.scanning{border-color:var(--accent);box-shadow:var(--glow-blue);}
+.scan-area.ok{border-color:var(--success);box-shadow:0 0 24px rgba(16,185,129,0.3);}
+.scan-area.fail{border-color:var(--danger);box-shadow:0 0 24px rgba(239,68,68,0.3);}
+
+.scan-line{
+  position:absolute;left:0;right:0;height:2px;top:0;display:none;
+  background:linear-gradient(90deg,transparent,var(--accent),transparent);
+  animation:sl 1.2s linear infinite;
+}
+.scan-area.scanning .scan-line{display:block;}
+@keyframes sl{0%{top:0;}100%{top:100%;}}
+
+.fp-svg{width:80px;height:100px;opacity:0.35;transition:opacity 0.4s;}
+.scan-area.scanning .fp-svg{opacity:0.8;}
+
+.scan-status{
+  text-align:center;font-size:0.82rem;font-weight:700;
+  padding:6px 14px;border-radius:20px;
+  background:rgba(255,255,255,0.05);color:var(--text3);
+  transition:all 0.3s;
+}
+.scan-status.sc{background:rgba(59,130,246,0.1);color:var(--accent2);}
+.scan-status.ok{background:rgba(16,185,129,0.1);color:var(--success);}
+.scan-status.fail{background:rgba(239,68,68,0.1);color:var(--danger);}
+
+/* REQUESTS */
+.req-card{
+  background:var(--card2);border:1px solid var(--border);
+  border-radius:12px;padding:14px 16px;
+  margin-bottom:10px;
+  display:flex;align-items:center;gap:12px;
+  transition:border-color 0.2s;
+}
+.req-card:hover{border-color:var(--border2);}
+.req-icon{font-size:1.4rem;}
+.req-info{flex:1;}
+.req-title{font-weight:700;font-size:0.88rem;}
+.req-sub{font-size:0.73rem;color:var(--text3);margin-top:2px;}
+.req-actions{display:flex;gap:6px;}
+
+/* GRID 2 */
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:16px;}
+.g3-auto{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:16px;}
+
+/* EMP PROFILE CARD */
+.emp-profile{
+  background:linear-gradient(135deg,var(--card),var(--card2));
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:20px;display:flex;align-items:center;gap:16px;
+  margin-bottom:16px;
+}
+.ep-av{width:56px;height:56px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.4rem;font-weight:900;flex-shrink:0;}
+.ep-name{font-size:1.1rem;font-weight:800;}
+.ep-sub{font-size:0.78rem;color:var(--text3);margin-top:3px;}
+.ep-tags{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;}
+
+/* DEDUCTION INFO */
+.ded-row{
+  display:flex;justify-content:space-between;align-items:center;
+  padding:8px 0;border-bottom:1px solid var(--border);font-size:0.83rem;
+}
+.ded-row:last-child{border-bottom:none;}
+
+/* SEARCH INPUT */
+.search-wrap{
+  display:flex;align-items:center;gap:8px;
+  background:rgba(0,0,0,0.25);border:1px solid var(--border);
+  border-radius:9px;padding:7px 12px;
+  flex:1;max-width:280px;
+}
+.search-wrap input{background:none;border:none;padding:0;flex:1;outline:none;font-size:0.84rem;}
+
+/* RESPONSIVE */
+@media(max-width:768px){
+  .app-layout{grid-template-columns:1fr;padding-bottom:64px;}
+  .sidebar{
+    display:flex!important;
+    flex-direction:row!important;
+    position:fixed;bottom:0;left:0;right:0;
+    height:64px;z-index:200;
+    border-top:1px solid var(--border);
+    border-left:none;
+    overflow-x:auto;overflow-y:hidden;
+    padding:0 4px;
+    background:var(--surface);
+    align-items:center;
+    gap:2px;
+  }
+  .sidebar-section-label{display:none;}
+  .nav-item{
+    flex-direction:column;
+    padding:6px 10px;
+    border-right:none!important;
+    border-bottom:3px solid transparent;
+    border-radius:8px 8px 0 0;
+    font-size:0.65rem;
+    min-width:56px;
+    text-align:center;
+    gap:2px;
+    flex-shrink:0;
+  }
+  .nav-item.active{
+    border-right:none!important;
+    border-bottom-color:var(--accent)!important;
+  }
+  .nav-item .n-icon{font-size:1.2rem;}
+  .nav-badge{display:none;}
+  .sidebar > div[style*="padding:12px"]{display:none;}
+  .form-grid,.g2{grid-template-columns:1fr;}
+  .stats-row{grid-template-columns:1fr 1fr;}
+  .content{padding:14px 12px;}
+  .modal{padding:18px 14px;}
+  .ph{flex-direction:column;align-items:flex-start;}
+}
+
+/* SCROLLBAR */
+::-webkit-scrollbar{width:4px;height:4px;}
+::-webkit-scrollbar-track{background:transparent;}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:4px;}
+
+
+/* LOGIN STEPS */
+.ls-step{display:none;flex-direction:column;gap:10px;}
+.ls-step.ls-active{display:flex;}
+
+/* NUMPAD */
+.npbtn{padding:14px;border-radius:10px;border:1px solid var(--border);background:var(--card2);color:var(--text);font-family:'Cairo',sans-serif;font-size:1.2rem;font-weight:700;cursor:pointer;transition:background 0.15s;}
+.npbtn:hover{background:var(--card);}
+.npbtn:active{background:var(--border2);}
+
+/* INPUT NUMBER no spin */
+input[type=number]::-webkit-inner-spin-button{-webkit-appearance:none;}
+
+/* TOGGLE */
+.toggle-wrap{display:flex;align-items:center;gap:10px;}
+.toggle{
+  width:44px;height:24px;border-radius:12px;
+  background:var(--border2);position:relative;
+  cursor:pointer;transition:background 0.2s;flex-shrink:0;
+}
+.toggle.on{background:var(--success);}
+.toggle::after{
+  content:'';position:absolute;
+  top:3px;right:3px;
+  width:18px;height:18px;border-radius:50%;
+  background:white;transition:right 0.2s;
+}
+.toggle.on::after{right:calc(100% - 21px);}
+
+/* COLOR PICKERS for shifts */
+.color-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;}
+.color-dot{
+  width:24px;height:24px;border-radius:50%;cursor:pointer;
+  border:2px solid transparent;transition:all 0.2s;
+}
+.color-dot.selected{border-color:white;transform:scale(1.1);}
+</style>
+</head>
+<body>
+
+<!-- NOTIFICATION -->
+<div class="notif" id="notif"><span id="notif-icon">✅</span><span id="notif-text"></span></div>
+
+<!-- ===== LOGIN SCREEN ===== -->
+<div id="login-screen">
+  <div class="login-logo">
+    <div class="login-logo-icon">&#128406;</div>
+    نظام الحضور والانصراف
+  </div>
+
+  <div id="ls-choose" class="ls-step ls-active">
+    <p style="color:var(--text3);font-size:0.85rem;text-align:center;">اختر نوع الدخول</p>
+    <div style="display:flex;gap:20px;flex-wrap:wrap;justify-content:center;">
+      <div class="login-card manager" onclick="lsShow('ls-mgr');document.getElementById('mgr-pin-input').value=''">
+        <div class="login-card-icon">&#128084;</div>
+        <div class="login-card-title">واجهة المدير</div>
+        <div class="login-card-sub">إدارة الموظفين والتقارير والمكافآت</div>
+      </div>
+      <div class="login-card employee" onclick="lsShowEmpSel()" style="border-color:rgba(16,185,129,0.3);">
+        <div class="login-card-icon">&#128100;</div>
+        <div class="login-card-title">واجهة الموظف</div>
+        <div class="login-card-sub">تسجيل الحضور والانصراف والطلبات</div>
+      </div>
+    </div>
+  </div>
+
+  <div id="ls-mgr" class="ls-step" style="width:300px;align-items:center;">
+    <div style="font-size:2.2rem;text-align:center;">&#128084;</div>
+    <div style="font-weight:800;font-size:1.1rem;text-align:center;">دخول المدير</div>
+    <div style="font-size:0.82rem;color:var(--text3);text-align:center;">أدخل الرمز السري</div>
+    <input id="mgr-pin-input" type="password" placeholder="الرمز السري"
+      style="width:100%;text-align:center;font-size:1.5rem;letter-spacing:8px;padding:13px;"
+      onkeydown="if(event.key==='Enter')lsCheckMgr()" />
+    <div id="mgr-pin-error" style="color:var(--danger);font-size:0.82rem;font-weight:700;text-align:center;display:none;">رمز خاطئ</div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center;padding:11px;" onclick="lsCheckMgr()">دخول</button>
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="lsShow('ls-choose')">رجوع</button>
+  </div>
+
+  <div id="ls-emp-sel" class="ls-step" style="width:300px;align-items:center;">
+    <div style="font-size:2.2rem;text-align:center;">&#128100;</div>
+    <div style="font-weight:800;font-size:1.1rem;text-align:center;">اختر اسمك</div>
+    <select id="emp-login-select" style="width:100%;padding:11px 14px;font-size:0.92rem;">
+      <option value="">-- اختر اسمك --</option>
+    </select>
+    <button class="btn btn-success" style="width:100%;justify-content:center;padding:11px;" onclick="lsShowEmpPin()">التالي</button>
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="lsShow('ls-choose')">رجوع</button>
+  </div>
+
+  <div id="ls-emp-pin" class="ls-step" style="width:280px;align-items:center;">
+    <div id="emp-pin-avatar" style="width:54px;height:54px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:1.5rem;font-weight:900;"></div>
+    <div id="emp-pin-name" style="font-weight:800;font-size:1rem;text-align:center;"></div>
+    <div style="font-size:0.8rem;color:var(--text3);">أدخل رمزك السري</div>
+    <input id="emp-pin-input" type="password" placeholder="الرمز" maxlength="10" readonly
+      style="width:100%;text-align:center;font-size:1.8rem;letter-spacing:10px;padding:12px;" />
+    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:8px;width:100%;">
+      <button class="npbtn" onclick="pinPad('1')">1</button>
+      <button class="npbtn" onclick="pinPad('2')">2</button>
+      <button class="npbtn" onclick="pinPad('3')">3</button>
+      <button class="npbtn" onclick="pinPad('4')">4</button>
+      <button class="npbtn" onclick="pinPad('5')">5</button>
+      <button class="npbtn" onclick="pinPad('6')">6</button>
+      <button class="npbtn" onclick="pinPad('7')">7</button>
+      <button class="npbtn" onclick="pinPad('8')">8</button>
+      <button class="npbtn" onclick="pinPad('9')">9</button>
+      <button class="npbtn" style="visibility:hidden;"></button>
+      <button class="npbtn" onclick="pinPad('0')">0</button>
+      <button class="npbtn" onclick="pinPad('DEL')">&#9003;</button>
+    </div>
+    <div id="emp-pin-error" style="color:var(--danger);font-size:0.82rem;font-weight:700;display:none;">رمز خاطئ</div>
+    <button class="btn btn-success" style="width:100%;justify-content:center;padding:11px;" onclick="lsCheckEmp()">دخول</button>
+    <button class="btn btn-ghost btn-sm" style="width:100%;justify-content:center;" onclick="lsShow('ls-emp-sel')">رجوع</button>
+  </div>
+
+</div>
+
+<!-- ===== APP ===== -->
+<div id="app">
+  <div class="topbar">
+    <div class="topbar-logo">
+      <div class="topbar-logo-icon">🖐️</div>
+      <span id="app-title">نظام الحضور</span>
+    </div>
+    <div class="topbar-right">
+      <div class="live-dot"></div>
+      <div class="topbar-clock" id="topbar-clock">--:--:--</div>
+      <div class="topbar-user">
+        <div class="user-avatar" id="topbar-av" style="background:#1d4ed8;">م</div>
+        <span id="topbar-name">المدير</span>
+      </div>
+      <button id="refresh-btn" onclick="doRefresh()" style="background:rgba(59,130,246,0.1);border:1px solid rgba(59,130,246,0.3);color:var(--accent2);border-radius:8px;padding:6px 12px;cursor:pointer;font-family:'Cairo',sans-serif;font-size:0.78rem;font-weight:700;transition:all 0.2s;" title="تحديث البيانات من Google Sheets">🔄 تحديث</button>
+      <button class="btn-logout" onclick="logout()">🚪 خروج</button>
+    </div>
+  </div>
+
+  <div class="app-layout">
+    <nav class="sidebar" id="sidebar"></nav>
+    <div class="content" id="content"></div>
+  </div>
+</div>
+
+<!-- ===== MODALS ===== -->
+
+<!-- Edit Employee -->
+<div class="modal-overlay" id="modal-edit-emp">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">✏️ تعديل بيانات الموظف</div>
+    <button class="close-btn" onclick="closeModal('modal-edit-emp')">✕</button>
+  </div>
+  <input type="hidden" id="edit-emp-id" />
+  <div class="form-grid">
+    <div class="fg form-full"><label>الاسم الكامل *</label><input id="edit-emp-name" placeholder="الاسم الكامل" /></div>
+    <div class="fg"><label>القسم</label>
+      <select id="edit-emp-dept">
+        <option>تقنية المعلومات</option><option>الموارد البشرية</option>
+        <option>المالية</option><option>المبيعات</option><option>العمليات</option><option>الإدارة</option>
+      </select>
+    </div>
+    <div class="fg"><label>رقم الهاتف</label><input id="edit-emp-phone" /></div>
+    <div class="fg"><label>الراتب الأساسي (د.ع)</label><input id="edit-emp-salary" type="number" /></div>
+    <div class="fg form-full">
+      <label>نوع الشفت</label>
+      <div class="tabs" style="margin-bottom:10px;">
+        <div class="tab active" id="edit-shift-tab-1" onclick="setEditShiftType(1)">شفت واحد</div>
+        <div class="tab" id="edit-shift-tab-2" onclick="setEditShiftType(2)">شفتين</div>
+      </div>
+    </div>
+    <div class="fg form-full" id="edit-shift1-section">
+      <label>وقت الشفت الأول</label>
+      <div class="form-grid">
+        <div><label>بداية</label><input type="time" id="edit-s1-start" /></div>
+        <div><label>نهاية</label><input type="time" id="edit-s1-end" /></div>
+      </div>
+    </div>
+    <div class="fg form-full" id="edit-shift2-section" style="display:none;">
+      <label>وقت الشفت الثاني</label>
+      <div class="form-grid">
+        <div><label>بداية</label><input type="time" id="edit-s2-start" /></div>
+        <div><label>نهاية</label><input type="time" id="edit-s2-end" /></div>
+      </div>
+    </div>
+    <div class="fg form-full">
+      <label>اللون</label>
+      <div class="color-row" id="edit-color-picker">
+        <div class="color-dot" style="background:#3b82f6;" data-color="#3b82f6" onclick="pickEditColor(this)"></div>
+        <div class="color-dot" style="background:#10b981;" data-color="#10b981" onclick="pickEditColor(this)"></div>
+        <div class="color-dot" style="background:#8b5cf6;" data-color="#8b5cf6" onclick="pickEditColor(this)"></div>
+        <div class="color-dot" style="background:#ef4444;" data-color="#ef4444" onclick="pickEditColor(this)"></div>
+        <div class="color-dot" style="background:#f59e0b;" data-color="#f59e0b" onclick="pickEditColor(this)"></div>
+        <div class="color-dot" style="background:#ec4899;" data-color="#ec4899" onclick="pickEditColor(this)"></div>
+        <div class="color-dot" style="background:#06b6d4;" data-color="#06b6d4" onclick="pickEditColor(this)"></div>
+        <div class="color-dot" style="background:#84cc16;" data-color="#84cc16" onclick="pickEditColor(this)"></div>
+      </div>
+    </div>
+    <div class="fg form-full" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:12px;">
+      <label style="color:var(--accent2);">🔐 الرمز السري (اتركه فارغاً لعدم التغيير)</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="edit-emp-pin" type="password" placeholder="رمز سري جديد..." style="flex:1;" maxlength="10" />
+        <button type="button" onclick="togglePinVis('edit-emp-pin',this)" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--text3);">👁</button>
+      </div>
+      <div id="edit-pin-current" style="font-size:0.72rem;color:var(--text3);margin-top:5px;"></div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-edit-emp')">إلغاء</button>
+    <button class="btn btn-primary" onclick="saveEditEmployee()">💾 حفظ التعديلات</button>
+  </div>
+</div>
+</div>
+
+<!-- Weekly Reset Confirm -->
+<div class="modal-overlay" id="modal-weekly-reset">
+<div class="modal" style="max-width:420px;">
+  <div class="modal-header">
+    <div class="modal-title">🔄 تصفير أسبوعي</div>
+    <button class="close-btn" onclick="closeModal('modal-weekly-reset')">✕</button>
+  </div>
+  <div class="alert a-warn" style="margin-bottom:16px;">
+    ⚠️ سيتم تصفير جميع الخصومات والمكافآت وسجلات الحضور وسيتم حفظ نسخة أرشيفية قبل التصفير.
+  </div>
+  <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:14px;margin-bottom:16px;" id="weekly-reset-preview"></div>
+  <div class="fg">
+    <label>ملاحظة الأرشفة (اختياري)</label>
+    <input id="reset-note" placeholder="مثال: تصفير أسبوع 15-21 يناير 2025" />
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:8px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-weekly-reset')">إلغاء</button>
+    <button class="btn btn-danger" onclick="confirmWeeklyReset()">🔄 تأكيد التصفير</button>
+  </div>
+</div>
+</div>
+
+<!-- Payroll Modal -->
+<div class="modal-overlay" id="modal-payroll">
+<div class="modal" style="max-width:560px;">
+  <div class="modal-header">
+    <div class="modal-title">💵 كشف الرواتب</div>
+    <button class="close-btn" onclick="closeModal('modal-payroll')">✕</button>
+  </div>
+  <div id="payroll-content"></div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:12px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-payroll')">إغلاق</button>
+  </div>
+</div>
+</div>
+
+<!-- Add Employee -->
+<div class="modal-overlay" id="modal-add-emp">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">➕ إضافة موظف جديد</div>
+    <button class="close-btn" onclick="closeModal('modal-add-emp')">✕</button>
+  </div>
+  <div class="form-grid">
+    <div class="fg form-full"><label>الاسم الكامل *</label><input id="ne-name" placeholder="أحمد محمد الخفاجي" /></div>
+    <div class="fg"><label>رقم الموظف *</label><input id="ne-id" placeholder="EMP001" /></div>
+    <div class="fg"><label>القسم</label>
+      <select id="ne-dept">
+        <option>تقنية المعلومات</option><option>الموارد البشرية</option>
+        <option>المالية</option><option>المبيعات</option><option>العمليات</option><option>الإدارة</option>
+      </select>
+    </div>
+    <div class="fg"><label>رقم الهاتف</label><input id="ne-phone" placeholder="07xx-xxx-xxxx" /></div>
+    <div class="fg"><label>الراتب الأساسي (د.ع)</label><input id="ne-salary" type="number" placeholder="500000" /></div>
+    <div class="fg form-full">
+      <label>نوع الشفت</label>
+      <div class="tabs" style="margin-bottom:10px;">
+        <div class="tab active" id="shift-tab-1" onclick="setShiftType(1)">شفت واحد</div>
+        <div class="tab" id="shift-tab-2" onclick="setShiftType(2)">شفتين</div>
+      </div>
+    </div>
+    <div class="fg form-full" id="shift1-section">
+      <label>وقت الشفت الأول</label>
+      <div class="form-grid">
+        <div><label>بداية</label><input type="time" id="ne-s1-start" value="08:00" /></div>
+        <div><label>نهاية</label><input type="time" id="ne-s1-end" value="16:00" /></div>
+      </div>
+    </div>
+    <div class="fg form-full" id="shift2-section" style="display:none;">
+      <label>وقت الشفت الثاني</label>
+      <div class="form-grid">
+        <div><label>بداية</label><input type="time" id="ne-s2-start" value="16:00" /></div>
+        <div><label>نهاية</label><input type="time" id="ne-s2-end" value="00:00" /></div>
+      </div>
+    </div>
+    <div class="fg form-full">
+      <label>لون الموظف</label>
+      <div class="color-row" id="color-picker">
+        <div class="color-dot selected" style="background:#3b82f6;" data-color="#3b82f6" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#10b981;" data-color="#10b981" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#8b5cf6;" data-color="#8b5cf6" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#ef4444;" data-color="#ef4444" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#f59e0b;" data-color="#f59e0b" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#ec4899;" data-color="#ec4899" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#06b6d4;" data-color="#06b6d4" onclick="pickColor(this)"></div>
+        <div class="color-dot" style="background:#84cc16;" data-color="#84cc16" onclick="pickColor(this)"></div>
+      </div>
+    </div>
+    <div class="fg form-full" style="background:rgba(59,130,246,0.06);border:1px solid rgba(59,130,246,0.2);border-radius:10px;padding:12px;">
+      <label style="color:var(--accent2);">🔐 الرمز السري للموظف *</label>
+      <div style="display:flex;gap:8px;align-items:center;">
+        <input id="ne-pin" type="password" placeholder="أدخل رمزاً سرياً" style="flex:1;" maxlength="10" />
+        <button type="button" onclick="togglePinVis('ne-pin',this)" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--text3);">👁</button>
+      </div>
+      <div style="font-size:0.72rem;color:var(--text3);margin-top:5px;">يستخدمه الموظف عند تسجيل الدخول — لا تشاركه مع أحد.</div>
+    </div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-add-emp')">إلغاء</button>
+    <button class="btn btn-primary" onclick="addEmployee()">➕ إضافة الموظف</button>
+  </div>
+</div>
+</div>
+
+
+<!-- Manual Deduction Modal -->
+<div class="modal-overlay" id="modal-manual-ded">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">💸 خصم يدوي من الموظف</div>
+    <button class="close-btn" onclick="closeModal('modal-manual-ded')">✕</button>
+  </div>
+  <div class="form-grid">
+    <div class="fg"><label>الموظف</label><select id="mded-emp"></select></div>
+    <div class="fg"><label>المبلغ (د.ع)</label><input id="mded-amount" type="number" placeholder="10000" /></div>
+    <div class="fg form-full"><label>سبب الخصم *</label><input id="mded-reason" placeholder="مثال: كسر معدة، غياب بدون إذن..." /></div>
+    <div class="fg"><label>التاريخ</label><input id="mded-date" type="date" /></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-manual-ded')">إلغاء</button>
+    <button class="btn btn-danger" onclick="addManualDeduction()">💸 تطبيق الخصم</button>
+  </div>
+</div>
+</div>
+
+<!-- Bonus Modal -->
+<div class="modal-overlay" id="modal-bonus">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">🏆 إضافة مكافأة</div>
+    <button class="close-btn" onclick="closeModal('modal-bonus')">✕</button>
+  </div>
+  <div class="form-grid">
+    <div class="fg"><label>الموظف</label>
+      <select id="bon-emp"></select>
+    </div>
+    <div class="fg"><label>المبلغ (د.ع)</label><input id="bon-amount" type="number" placeholder="50000" /></div>
+    <div class="fg form-full"><label>السبب</label><input id="bon-reason" placeholder="مكافأة أداء متميز..." /></div>
+    <div class="fg"><label>التاريخ</label><input id="bon-date" type="date" /></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-bonus')">إلغاء</button>
+    <button class="btn btn-gold" onclick="addBonus()">🏆 إضافة المكافأة</button>
+  </div>
+</div>
+</div>
+
+<!-- Manual Absence Modal -->
+<div class="modal-overlay" id="modal-absence">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">📋 تسجيل غياب يدوي</div>
+    <button class="close-btn" onclick="closeModal('modal-absence')">✕</button>
+  </div>
+  <div class="form-grid">
+    <div class="fg"><label>الموظف</label><select id="abs-emp"></select></div>
+    <div class="fg"><label>التاريخ</label><input id="abs-date" type="date" /></div>
+    <div class="fg form-full"><label>السبب</label><input id="abs-reason" placeholder="سبب الغياب..." /></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-absence')">إلغاء</button>
+    <button class="btn btn-danger" onclick="addAbsence()">📋 تسجيل الغياب</button>
+  </div>
+</div>
+</div>
+
+<!-- Request Loan -->
+<div class="modal-overlay" id="modal-loan">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">💰 طلب سلفة</div>
+    <button class="close-btn" onclick="closeModal('modal-loan')">✕</button>
+  </div>
+  <div class="form-grid">
+    <div class="fg"><label>المبلغ المطلوب (د.ع)</label><input id="loan-amount" type="number" placeholder="100000" /></div>
+    <div class="fg"><label>عدد الأقساط</label>
+      <select id="loan-months">
+        <option value="1">قسط واحد</option>
+        <option value="2">2 أقساط</option>
+        <option value="3">3 أقساط</option>
+        <option value="6">6 أقساط</option>
+      </select>
+    </div>
+    <div class="fg form-full"><label>السبب</label><textarea id="loan-reason" placeholder="سبب طلب السلفة..."></textarea></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-loan')">إلغاء</button>
+    <button class="btn btn-primary" onclick="submitLoan()">📤 إرسال الطلب</button>
+  </div>
+</div>
+</div>
+
+<!-- Request Full Leave -->
+<div class="modal-overlay" id="modal-leave-full">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">📅 طلب إجازة يوم كامل</div>
+    <button class="close-btn" onclick="closeModal('modal-leave-full')">✕</button>
+  </div>
+  <div class="form-grid">
+    <div class="fg"><label>من تاريخ</label><input id="lf-from" type="date" /></div>
+    <div class="fg"><label>إلى تاريخ</label><input id="lf-to" type="date" /></div>
+    <div class="fg form-full"><label>نوع الإجازة</label>
+      <select id="lf-type">
+        <option>إجازة سنوية</option><option>إجازة مرضية</option>
+        <option>إجازة طارئة</option><option>إجازة بدون راتب</option>
+      </select>
+    </div>
+    <div class="fg form-full"><label>السبب</label><textarea id="lf-reason" placeholder="سبب الإجازة..."></textarea></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-leave-full')">إلغاء</button>
+    <button class="btn btn-primary" onclick="submitLeave('full')">📤 إرسال الطلب</button>
+  </div>
+</div>
+</div>
+
+<!-- Request Time Leave -->
+<div class="modal-overlay" id="modal-leave-time">
+<div class="modal">
+  <div class="modal-header">
+    <div class="modal-title">⏱️ طلب إجازة زمنية</div>
+    <button class="close-btn" onclick="closeModal('modal-leave-time')">✕</button>
+  </div>
+  <div class="form-grid">
+    <div class="fg"><label>التاريخ</label><input id="lt-date" type="date" /></div>
+    <div class="fg"></div>
+    <div class="fg"><label>من الساعة</label><input id="lt-from" type="time" /></div>
+    <div class="fg"><label>إلى الساعة</label><input id="lt-to" type="time" /></div>
+    <div class="fg form-full"><label>السبب</label><textarea id="lt-reason" placeholder="سبب الإجازة الزمنية..."></textarea></div>
+  </div>
+  <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
+    <button class="btn btn-ghost" onclick="closeModal('modal-leave-time')">إلغاء</button>
+    <button class="btn btn-primary" onclick="submitLeave('time')">📤 إرسال الطلب</button>
+  </div>
+</div>
+</div>
+
+<script>
+// =============================================
+// GOOGLE SHEETS CONFIG
+// =============================================
+const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbztLVdO5q6_vVb3c33ufV1jyrCMai9jmbjDrY1lvqpSGJOBRnNgpmhSNEyob-jXEvjC/exec';
+
+// ── API call to Google Sheets ──────────────
+async function api(action, data={}) {
+  try {
+    const res = await fetch(SCRIPT_URL, {
+      method: 'POST',
+      body: JSON.stringify({action, ...data})
+    });
+    const json = await res.json();
+    if(json.error) throw new Error(json.error);
+    return json;
+  } catch(e) {
+    showNotif('❌ خطأ في الاتصال بالشيت: ' + e.message, 'danger');
+    throw e;
+  }
+}
+
+// ── Loading overlay ──
+function showLoading(msg='جارٍ التحميل...'){
+  let el = document.getElementById('loading-overlay');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'loading-overlay';
+    el.style.cssText = 'position:fixed;inset:0;background:rgba(7,11,20,0.85);z-index:9998;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;';
+    el.innerHTML = '<div style="width:48px;height:48px;border:4px solid var(--border);border-top-color:var(--accent);border-radius:50%;animation:spin 0.8s linear infinite;"></div><div style="color:var(--text2);font-weight:700;font-size:0.9rem;" id="loading-msg"></div>';
+    document.body.appendChild(el);
+  }
+  document.getElementById('loading-msg').textContent = msg;
+  el.style.display = 'flex';
+}
+
+function hideLoading(){
+  const el = document.getElementById('loading-overlay');
+  if(el) el.style.display = 'none';
+}
+
+// ── Convert Sheets rows to DB format ──
+function formatSheetTime(t){
+  if(!t) return '';
+  if(t instanceof Date){
+    // Use UTC hours/minutes to avoid timezone offset issues
+    // Google Sheets stores times as dates starting from Dec 30, 1899
+    const totalMins = Math.round((t - new Date(1899,11,30)) / 60000);
+    const h = Math.floor(totalMins / 60) % 24;
+    const m = totalMins % 60;
+    return String(h).padStart(2,'0') + ':' + String(m).padStart(2,'0');
+  }
+  const s = String(t).trim();
+  // Handle format like "8:00:00 AM" or "08:00"
+  const ampm = s.match(/(\d{1,2}):(\d{2})(?::\d{2})?\s*(AM|PM)?/i);
+  if(ampm){
+    let h = parseInt(ampm[1]);
+    const m = ampm[2];
+    if(ampm[3]){
+      if(ampm[3].toUpperCase()==='PM' && h<12) h+=12;
+      if(ampm[3].toUpperCase()==='AM' && h===12) h=0;
+    }
+    return String(h).padStart(2,'0')+':'+m;
+  }
+  return s;
+}
+
+function sheetsToDB(data) {
+  // employees
+  DB.employees = (data.employees||[]).map(r => ({
+    id: r['رقم الموظف'], name: r['الاسم'], dept: r['القسم'],
+    salary: parseFloat(r['الراتب'])||0, pin: String(r['رمز الدخول']||''),
+    color: r['لون']||'#3b82f6', shiftType: parseInt(r['نوع الشفت'])||1,
+    s1Start: formatSheetTime(r['بداية ش1']), s1End: formatSheetTime(r['نهاية ش1']),
+    s2Start: r['بداية ش2'] ? formatSheetTime(r['بداية ش2']) : null,
+    s2End: r['نهاية ش2'] ? formatSheetTime(r['نهاية ش2']) : null
+  }));
+
+  // attendance
+  DB.attendance = (data.attendance||[]).map(r => ({
+    empId: r['رقم الموظف'], empName: r['اسم الموظف'],
+    date: r['التاريخ'], inTime: r['وقت الدخول'],
+    outTime: r['وقت الخروج']||null, shiftNum: parseInt(r['رقم الشفت'])||1,
+    status: r['الحالة']||'present', lateMin: parseInt(r['دقائق التأخير'])||0
+  }));
+
+  // bonuses
+  DB.bonuses = (data.bonuses||[]).map(r => ({
+    empId: r['رقم الموظف'], empName: r['اسم الموظف'],
+    amount: parseFloat(r['المبلغ'])||0, reason: r['السبب'], date: r['التاريخ']
+  }));
+
+  // deductions (manual)
+  DB.manualDeductions = (data.deductions||[]).map(r => ({
+    empId: r['رقم الموظف'], empName: r['اسم الموظف'],
+    amount: parseFloat(r['المبلغ'])||0, reason: r['السبب'],
+    date: r['التاريخ'], type: r['النوع']||'manual', reqId: r['رقم الطلب']||''
+  }));
+
+  // absences
+  DB.absences = (data.absences||[]).map(r => ({
+    empId: r['رقم الموظف'], empName: r['اسم الموظف'],
+    date: r['التاريخ'], reason: r['السبب']||''
+  }));
+
+  // requests
+  DB.requests = (data.requests||[]).map(r => ({
+    id: r['رقم الطلب'], empId: r['رقم الموظف'], empName: r['اسم الموظف'],
+    type: r['النوع'], amount: parseFloat(r['المبلغ'])||0,
+    months: r['الأقساط'], from: r['من'], to: r['إلى'],
+    date: r['التاريخ'], reason: r['السبب']||'', status: r['الحالة']||'pending'
+  }));
+
+  // archive
+  DB.archive = (data.archive||[]).map(r => ({
+    id: r['رقم الأرشيف'], date: r['التاريخ'],
+    note: r['الملاحظة'],
+    snapshot: (() => { try { return JSON.parse(r['بيانات JSON']||'{}'); } catch(e){ return {}; } })()
+  }));
+
+  // settings
+  const s = data.settings || {};
+  // Keep existing values as fallback if sheets returns empty
+  const prevDed = DB.settings?.deductPerMin || 0;
+  const prevThresh = DB.settings?.lateThreshold || 6;
+  DB.settings = {
+    orgName: s.orgName || DB.settings?.orgName || 'شركة البصمة الذكية',
+    managerPin: String(s.managerPin || DB.settings?.managerPin || '5566'),
+    deductPerMin: parseFloat(s.deductPerMin) > 0 ? parseFloat(s.deductPerMin) : prevDed,
+    lateThreshold: parseInt(s.lateThreshold) > 0 ? parseInt(s.lateThreshold) : prevThresh,
+    workDaysDiv: parseFloat(s.workDaysDiv) || 7.5
+  };
+  // Save to localStorage so it persists
+  localStorage.setItem('fp_settings_backup', JSON.stringify(DB.settings));
+}
+
+// ── Load all data from Sheets ──
+async function refreshFromSheets(silent=false) {
+  if(!silent) showLoading('جارٍ تحميل البيانات من Google Sheets...');
+  try {
+    const data = await api('loadAll');
+    // Only update if we got real data back (not empty)
+    const hasData = (data.employees && data.employees.length > 0) ||
+                    (data.attendance && data.attendance.length > 0) ||
+                    (data.settings && data.settings.deductPerMin);
+    if(hasData || !silent){
+      sheetsToDB(data);
+      saveDB(); // cache the fresh data
+    }
+    if(!silent) showNotif('✅ تم تحديث البيانات', 'success');
+  } catch(e) {
+    if(!silent) showNotif('⚠️ تعذر الاتصال، البيانات من الكاش', 'info');
+  } finally {
+    hideLoading();
+  }
+}
+
+// =============================================
+// DATA STORE
+// =============================================
+const COLORS = ['#3b82f6','#10b981','#8b5cf6','#ef4444','#f59e0b','#ec4899','#06b6d4','#84cc16'];
+
+let DB = {
+  employees: [],
+  attendance: [],
+  bonuses: [],
+  absences: [],
+  requests: [],
+  manualDeductions: [],
+  settings: {
+    orgName: 'شركة البصمة الذكية',
+    deductPerMin: 500,
+    lateThreshold: 15
+  }
+};
+
+// Load from storage
+function loadDB(){
+  const s = localStorage.getItem('fp2_db');
+  if(s){ try{ const saved = JSON.parse(s); DB = saved; }catch(e){} }
+  // Always ensure settings has all required fields with sensible defaults
+  if(!DB.settings) DB.settings = {};
+  if(!DB.settings.orgName) DB.settings.orgName = 'شركة البصمة الذكية';
+  if(DB.settings.deductPerMin === undefined || DB.settings.deductPerMin === null) DB.settings.deductPerMin = 0;
+  if(!DB.settings.lateThreshold) DB.settings.lateThreshold = 15;
+  if(!DB.settings.managerPin) DB.settings.managerPin = '5566';
+  if(!DB.manualDeductions) DB.manualDeductions = [];
+  if(!DB.absences) DB.absences = [];
+  if(!DB.bonuses) DB.bonuses = [];
+  if(!DB.requests) DB.requests = [];
+  if(!DB.archive) DB.archive = [];
+  // Force numeric types for settings
+  DB.settings.deductPerMin = parseFloat(DB.settings.deductPerMin) || 0;
+  DB.settings.lateThreshold = parseInt(DB.settings.lateThreshold) || 6;
+  // Restore from settings backup if deductPerMin is 0
+  try {
+    const backup = JSON.parse(localStorage.getItem('fp_settings_backup') || '{}');
+    if(DB.settings.deductPerMin === 0 && parseFloat(backup.deductPerMin) > 0){
+      DB.settings.deductPerMin = parseFloat(backup.deductPerMin);
+    }
+    if(DB.settings.lateThreshold <= 0 && parseInt(backup.lateThreshold) > 0){
+      DB.settings.lateThreshold = parseInt(backup.lateThreshold);
+    }
+    if(!DB.settings.managerPin && backup.managerPin){
+      DB.settings.managerPin = backup.managerPin;
+    }
+  } catch(e){}
+}
+function saveDB(){ localStorage.setItem('fp2_db', JSON.stringify(DB)); }
+
+loadDB();
+if(!DB.settings.managerPin) { DB.settings.managerPin = '5566'; saveDB(); }
+// Auto-close any open attendance records from previous days
+(function autoCloseOldRecords(){
+  const today = new Date().toISOString().split('T')[0];
+  let changed = false;
+  if(!DB.attendance) return;
+  DB.attendance.forEach(rec => {
+    if(rec.inTime && !rec.outTime && rec.date !== today){
+      // Get shift end time
+      const emp = DB.employees.find(e => e.id === rec.empId);
+      if(emp){
+        const shiftEnd = (rec.shiftNum===2 && emp.s2End) ? emp.s2End : emp.s1End;
+        rec.outTime = shiftEnd || '23:59';
+      } else {
+        rec.outTime = '23:59';
+      }
+      rec.autoClosed = true;
+      changed = true;
+    }
+  });
+  if(changed) saveDB();
+})();
+
+// Init demo employees
+if(DB.employees.length === 0){
+  DB.employees = [
+    {id:'EMP001', name:'أحمد محمد الخفاجي', dept:'تقنية المعلومات', phone:'07701234567', salary:700000, color:'#3b82f6',
+     shiftType:1, s1Start:'08:00', s1End:'16:00', s2Start:null, s2End:null, pin:'1234'},
+    {id:'EMP002', name:'فاطمة علي الزيدي', dept:'الموارد البشرية', phone:'07712345678', salary:600000, color:'#10b981',
+     shiftType:1, s1Start:'08:00', s1End:'16:00', s2Start:null, s2End:null, pin:'5678'},
+    {id:'EMP003', name:'محمد حسين العبيدي', dept:'المالية', phone:'07723456789', salary:800000, color:'#8b5cf6',
+     shiftType:2, s1Start:'06:00', s1End:'14:00', s2Start:'14:00', s2End:'22:00', pin:'1111'},
+    {id:'EMP004', name:'زينب كاظم الموسوي', dept:'المبيعات', phone:'07734567890', salary:550000, color:'#ef4444',
+     shiftType:1, s1Start:'09:00', s1End:'17:00', s2Start:null, s2End:null, pin:'2222'},
+    {id:'EMP005', name:'علي جاسم الربيعي', dept:'العمليات', phone:'07745678901', salary:650000, color:'#f59e0b',
+     shiftType:2, s1Start:'07:00', s1End:'15:00', s2Start:'15:00', s2End:'23:00', pin:'3333'},
+  ];
+
+  const today = new Date().toISOString().split('T')[0];
+  DB.attendance = [
+    {empId:'EMP001', date:today, inTime:'08:05', outTime:'16:10', shiftNum:1, status:'present', lateMin:5},
+    {empId:'EMP002', date:today, inTime:'07:58', outTime:null, shiftNum:1, status:'present', lateMin:0},
+    {empId:'EMP004', date:today, inTime:'09:27', outTime:null, shiftNum:1, status:'late', lateMin:27},
+    {empId:'EMP003', date:today, inTime:'06:02', outTime:'14:05', shiftNum:1, status:'present', lateMin:2},
+  ];
+  DB.bonuses = [
+    {empId:'EMP001', amount:100000, reason:'أداء متميز في المشروع', date:today}
+  ];
+
+  saveDB();
+}
+
+// =============================================
+// STATE
+// =============================================
+let currentRole = null; // 'manager' | 'employee'
+let currentEmpId = null;
+let currentPage = '';
+let newEmpShiftType = 1;
+let newEmpColor = '#3b82f6';
+let scanTimer = null;
+
+
+// =============================================
+// REFRESH FROM SHEETS
+// =============================================
+async function doRefresh(){
+  const btn = document.getElementById('refresh-btn');
+  if(btn){ btn.textContent='⏳ جارٍ...'; btn.disabled=true; }
+  await refreshFromSheets(false);
+  // Re-render current page
+  if(currentRole==='manager') mgr_page(currentPage||'dashboard');
+  else if(currentRole==='employee') emp_page(currentPage||'home');
+  if(btn){ btn.textContent='🔄 تحديث'; btn.disabled=false; }
+}
+
+// =============================================
+// LOGIN
+// =============================================
+function lsShow(id){
+  document.querySelectorAll('.ls-step').forEach(el=>el.classList.remove('ls-active'));
+  const el=document.getElementById(id);
+  if(el) el.classList.add('ls-active');
+}
+
+function lsShowEmpSel(){
+  const sel=document.getElementById('emp-login-select');
+  sel.innerHTML='<option value="">-- اختر اسمك --</option>';
+  DB.employees.forEach(e=>{
+    sel.innerHTML+=`<option value="${e.id}">${e.name}</option>`;
+  });
+  lsShow('ls-emp-sel');
+}
+
+function lsShowEmpPin(){
+  const id=document.getElementById('emp-login-select').value;
+  if(!id){showNotif('يرجى اختيار اسمك','danger');return;}
+  const emp=getEmp(id);
+  if(!emp){showNotif('موظف غير موجود','danger');return;}
+  if(!emp.pin){showNotif('لا يوجد رمز سري، تواصل مع المدير','danger');return;}
+  currentEmpId=id;
+  document.getElementById('emp-pin-avatar').style.background=emp.color;
+  document.getElementById('emp-pin-avatar').textContent=emp.name.charAt(0);
+  document.getElementById('emp-pin-name').textContent=emp.name;
+  document.getElementById('emp-pin-input').value='';
+  document.getElementById('emp-pin-error').style.display='none';
+  lsShow('ls-emp-pin');
+}
+
+function lsCheckMgr(){
+  const entered=document.getElementById('mgr-pin-input').value;
+  const correct=DB.settings.managerPin||'5566';
+  if(entered===correct){
+    document.getElementById('mgr-pin-error').style.display='none';
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    currentRole='manager'; currentEmpId=null;
+    buildManagerUI();
+  } else {
+    document.getElementById('mgr-pin-error').style.display='block';
+    document.getElementById('mgr-pin-input').value='';
+  }
+}
+
+function lsCheckEmp(){
+  const emp=getEmp(currentEmpId);
+  const entered=document.getElementById('emp-pin-input').value;
+  if(!emp||!emp.pin){showNotif('خطأ في البيانات','danger');return;}
+  if(entered===emp.pin){
+    document.getElementById('emp-pin-error').style.display='none';
+    document.getElementById('login-screen').style.display='none';
+    document.getElementById('app').style.display='block';
+    currentRole='employee';
+    buildEmployeeUI();
+  } else {
+    document.getElementById('emp-pin-error').style.display='block';
+    document.getElementById('emp-pin-input').value='';
+  }
+}
+
+function pinPad(key){
+  const input=document.getElementById('emp-pin-input');
+  if(!input)return;
+  if(key==='DEL'){input.value=input.value.slice(0,-1);}
+  else if(key!==''&&input.value.length<10){input.value+=key;}
+}
+
+function logout(){
+  currentRole=null;currentEmpId=null;
+  document.getElementById('app').style.display='none';
+  document.getElementById('login-screen').style.display='flex';
+  document.getElementById('mgr-pin-input').value='';
+  document.getElementById('mgr-pin-error').style.display='none';
+  document.getElementById('emp-pin-input').value='';
+  document.getElementById('emp-pin-error').style.display='none';
+  lsShow('ls-choose');
+}
+
+function startApp(){
+  document.getElementById('login-screen').style.display='none';
+  document.getElementById('app').style.display='block';
+  
+  // Step 1: Load from cache immediately (instant)
+  loadDB();
+  if(currentRole==='manager') buildManagerUI();
+  else buildEmployeeUI();
+  
+  // Step 2: Refresh from Sheets in background silently
+  refreshFromSheets(true).then(()=>{
+    // Re-render current page with fresh data
+    if(currentRole==='manager') mgr_page(currentPage||'dashboard');
+    else emp_page(currentPage||'home');
+  }).catch(()=>{
+    // If Sheets fails, we already have cache data - no problem
+  });
+}
+
+// aliases
+function showManagerPin(){lsShow('ls-mgr');}
+function showEmpLogin(){lsShowEmpSel();}
+function backToChoose(){lsShow('ls-choose');}
+
+// =============================================
+// CLOCK
+// =============================================
+function updateClock(){
+  const now = new Date();
+  const ts = now.toLocaleTimeString('ar-IQ',{hour12:false});
+  document.getElementById('topbar-clock').textContent = ts;
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// =============================================
+// HELPERS
+// =============================================
+function getEmp(id){ return DB.employees.find(e => e.id === id); }
+
+function formatTime(t){ return t || '-'; }
+
+function todayStr(){ return new Date().toISOString().split('T')[0]; }
+
+function timeToMin(t){
+  if(!t) return 0;
+  try {
+    // If it's a Date object from Google Sheets
+    if(t instanceof Date) {
+      return t.getHours()*60 + t.getMinutes();
+    }
+    let s = String(t).trim();
+    // Replace Arabic-Indic digits with Western digits
+    s = s.replace(/[٠-٩]/g, c => c.charCodeAt(0) - 0x0660);
+    // Extract HH:MM pattern
+    const match = s.match(/(\d{1,2}):(\d{2})/);
+    if(match) return parseInt(match[1])*60 + parseInt(match[2]);
+    return 0;
+  } catch(e){ return 0; }
+}
+
+function calcLate(emp, inTime, shiftNum){
+  const shiftStart = shiftNum === 1 ? emp.s1Start : emp.s2Start;
+  if(!shiftStart || !inTime) return 0;
+  const startMin = timeToMin(shiftStart);
+  const inMin = timeToMin(inTime);
+  if(startMin === 0 || inMin === 0) return 0;
+  const threshold = parseInt(DB.settings.lateThreshold) || 6;
+  const late = inMin - startMin - threshold;
+  return Math.max(0, late);
+}
+
+function calcDeduction(lateMin){
+  if(!lateMin || lateMin <= 0) return 0;
+  const rate = parseFloat(DB.settings.deductPerMin) || 0;
+  return Math.round(lateMin * rate);
+}
+
+function getTodayRecord(empId){
+  const today = todayStr();
+  return DB.attendance.filter(a => a.empId === empId && a.date === today);
+}
+
+function getShiftLabel(emp, num){
+  if(!emp) return '';
+  const s = num===1 ? `${emp.s1Start} - ${emp.s1End}` : `${emp.s2Start} - ${emp.s2End}`;
+  return s;
+}
+
+const empSelOptions = () => DB.employees.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+
+function fmtCurrency(n){ return Number(n||0).toLocaleString('ar-IQ') + ' د.ع'; }
+
+function dateAr(d){ try{ return new Date(d).toLocaleDateString('ar-IQ',{year:'numeric',month:'long',day:'numeric'}); }catch(e){return d;} }
+
+// =============================================
+// NOTIFICATION
+// =============================================
+let notifTmr;
+function showNotif(text, type='success'){
+  const el = document.getElementById('notif');
+  el.className = `notif show n-${type}`;
+  document.getElementById('notif-icon').textContent = type==='success'?'✅':type==='danger'?'❌':type==='gold'?'🏆':'ℹ️';
+  document.getElementById('notif-text').textContent = text;
+  clearTimeout(notifTmr);
+  notifTmr = setTimeout(()=> el.className='notif', 3500);
+}
+
+// =============================================
+// MODALS
+// =============================================
+function openModal(id){ document.getElementById(id).classList.add('open'); }
+function closeModal(id){ document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.modal-overlay').forEach(m=>{
+  m.addEventListener('click', e=>{ if(e.target===m) m.classList.remove('open'); });
+});
+
+// =============================================
+// ============ MANAGER UI ==================
+// =============================================
+function buildManagerUI(){
+  document.getElementById('app-title').textContent = 'لوحة المدير';
+  document.getElementById('topbar-name').textContent = 'المدير';
+  document.getElementById('topbar-av').style.background = '#1d4ed8';
+  document.getElementById('topbar-av').textContent = 'م';
+
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = `
+    <div class="sidebar-section-label">الرئيسية</div>
+    <div class="nav-item active" onclick="mgr_page('dashboard')" id="mnav-dashboard"><span class="n-icon">📊</span> لوحة التحكم</div>
+    <div class="nav-item" onclick="mgr_page('live')" id="mnav-live"><span class="n-icon">🔴</span> الحضور المباشر</div>
+    <div class="sidebar-section-label">الموظفون</div>
+    <div class="nav-item" onclick="mgr_page('employees')" id="mnav-employees"><span class="n-icon">👥</span> الموظفون <span class="nav-badge" id="emp-nav-count">${DB.employees.length}</span></div>
+    <div class="nav-item" onclick="mgr_page('attendance')" id="mnav-attendance"><span class="n-icon">📋</span> سجل الحضور</div>
+    <div class="nav-item" onclick="mgr_page('absences')" id="mnav-absences"><span class="n-icon">❌</span> الغيابات</div>
+    <div class="sidebar-section-label">المالية</div>
+    <div class="nav-item" onclick="mgr_page('bonuses')" id="mnav-bonuses"><span class="n-icon">🏆</span> المكافآت</div>
+    <div class="nav-item" onclick="mgr_page('deductions')" id="mnav-deductions"><span class="n-icon">💸</span> الخصومات</div>
+    <div class="sidebar-section-label">الطلبات</div>
+    <div class="nav-item" onclick="mgr_page('requests')" id="mnav-requests"><span class="n-icon">📩</span> الطلبات <span class="nav-badge red" id="req-nav-count">${DB.requests.filter(r=>r.status==='pending').length||''}</span></div>
+    <div class="sidebar-section-label">الإعدادات</div>
+    <div class="nav-item" onclick="mgr_page('settings')" id="mnav-settings"><span class="n-icon">⚙️</span> الإعدادات</div>
+    <div class="nav-item" onclick="mgr_page('payroll')" id="mnav-payroll"><span class="n-icon">💵</span> كشف الرواتب</div>
+    <div class="nav-item" onclick="mgr_page('archive')" id="mnav-archive"><span class="n-icon">🗂️</span> الأرشيف</div>
+    <div style="padding:12px 16px;margin-top:auto;">
+      <button class="btn btn-danger" style="width:100%;justify-content:center;font-size:0.8rem;" onclick="openWeeklyReset()">🔄 تصفير أسبوعي</button>
+    </div>
+  `;
+
+  mgr_page('dashboard');
+}
+
+function mgr_page(page){
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const el = document.getElementById('mnav-'+page);
+  if(el) el.classList.add('active');
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'page active';
+  div.id = 'pg-'+page;
+  content.appendChild(div);
+  const fn = window['render_mgr_'+page];
+  if(fn) fn(div);
+}
+
+// ---- MANAGER: DASHBOARD ----
+function render_mgr_dashboard(el){
+  const today = todayStr();
+  const todayRecs = DB.attendance.filter(a=>a.date===today);
+  const presentIds = [...new Set(todayRecs.filter(a=>a.inTime).map(a=>a.empId))];
+  const lateRecs = todayRecs.filter(a=>a.lateMin>0);
+  const absent = DB.employees.length - presentIds.length;
+  const totalDed = todayRecs.reduce((s,a)=>s+calcDeduction(a.lateMin||0),0);
+
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">📊 لوحة التحكم</div><div class="ph-sub">${dateAr(today)}</div></div>
+      <div style="display:flex;gap:8px;">
+        <button class="btn btn-gold btn-sm" onclick="openBonusModal()">🏆 مكافأة</button>
+        <button class="btn btn-danger btn-sm" onclick="openManualDedModal()">💸 خصم يدوي</button>
+        <button class="btn btn-danger btn-sm" onclick="openAbsenceModal()">📋 غياب يدوي</button>
+        <button class="btn btn-primary btn-sm" onclick="openModal('modal-add-emp')">➕ موظف</button>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card sc-blue"><div class="sc-icon">👥</div><div class="sc-value">${DB.employees.length}</div><div class="sc-label">إجمالي الموظفين</div></div>
+      <div class="stat-card sc-green"><div class="sc-icon">✅</div><div class="sc-value">${presentIds.length}</div><div class="sc-label">حاضرون اليوم</div></div>
+      <div class="stat-card sc-red"><div class="sc-icon">❌</div><div class="sc-value">${absent}</div><div class="sc-label">غائبون</div></div>
+      <div class="stat-card sc-gold"><div class="sc-icon">⏰</div><div class="sc-value">${lateRecs.length}</div><div class="sc-label">متأخرون</div></div>
+      <div class="stat-card sc-purple"><div class="sc-icon">💸</div><div class="sc-value" style="font-size:1.1rem;">${(totalDed/1000).toFixed(0)}k</div><div class="sc-label">خصومات اليوم (د.ع)</div></div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">👥 الموظفون الحاضرون</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الموظف</th><th>دخول</th><th>شفت</th><th>حالة</th></tr></thead>
+            <tbody id="mgr-present-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">❌ الغائبون اليوم</span></div>
+        <div class="tbl-wrap">
+          <table>
+            <thead><tr><th>الموظف</th><th>القسم</th><th>الشفت</th></tr></thead>
+            <tbody id="mgr-absent-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Present
+  const ptbody = el.querySelector('#mgr-present-tbody');
+  if(presentIds.length === 0){
+    ptbody.innerHTML = '<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:16px;">لا يوجد حضور اليوم</td></tr>';
+  } else {
+    ptbody.innerHTML = presentIds.map(id => {
+      const emp = getEmp(id);
+      if(!emp) return '';
+      const rec = todayRecs.find(a => a.empId === id && a.inTime);
+      const lateM = rec?.lateMin || 0;
+      const statusClass = lateM > 0 ? 'b-gold' : 'b-green';
+      const statusLabel = lateM > 0 ? `متأخر ${lateM} د` : 'في الوقت';
+      return `<tr>
+        <td><div class="emp-cell"><div class="av" style="background:${emp.color}">${emp.name.charAt(0)}</div><div class="emp-cell-info"><div class="name">${emp.name}</div><div class="sub">${emp.dept}</div></div></div></td>
+        <td style="font-variant-numeric:tabular-nums;">${rec?.inTime || '-'}</td>
+        <td><span class="shift-tag st-1">شفت ${rec?.shiftNum||1}</span></td>
+        <td><span class="badge ${statusClass}">${statusLabel}</span></td>
+      </tr>`;
+    }).join('');
+  }
+
+  // Absent
+  const atbody = el.querySelector('#mgr-absent-tbody');
+  const absentEmps = DB.employees.filter(e => !presentIds.includes(e.id));
+  if(absentEmps.length === 0){
+    atbody.innerHTML = '<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:16px;">الجميع حاضر 🎉</td></tr>';
+  } else {
+    atbody.innerHTML = absentEmps.map(emp => `
+      <tr>
+        <td><div class="emp-cell"><div class="av" style="background:${emp.color}">${emp.name.charAt(0)}</div><div class="emp-cell-info"><div class="name">${emp.name}</div><div class="sub">${emp.id}</div></div></div></td>
+        <td>${emp.dept}</td>
+        <td>${getShiftLabel(emp,1)}</td>
+      </tr>
+    `).join('');
+  }
+}
+
+// ---- MANAGER: LIVE ----
+function render_mgr_live(el){
+  const today = todayStr();
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">🔴 الحضور المباشر</div><div class="ph-sub">حالة الموظفين الآن</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:14px;" id="live-cards"></div>
+  `;
+  const cont = el.querySelector('#live-cards');
+  cont.innerHTML = DB.employees.map(emp => {
+    const recs = DB.attendance.filter(a => a.empId === emp.id && a.date === today);
+    const inRec = recs.find(a => a.inTime && !a.outTime) || recs.find(a => a.inTime);
+    const isIn = recs.some(a => a.inTime && !a.outTime);
+    const lateM = inRec?.lateMin || 0;
+    const ded = calcDeduction(lateM);
+    let statusBadge = isIn ? `<span class="badge b-green">✅ حاضر</span>` : `<span class="badge b-red">❌ غائب</span>`;
+    if(lateM > 0 && isIn) statusBadge = `<span class="badge b-gold">⏰ متأخر ${lateM} د</span>`;
+
+    const shifts = emp.shiftType === 2
+      ? `<div style="font-size:0.72rem;color:var(--text3);">ش1: ${emp.s1Start}-${emp.s1End} | ش2: ${emp.s2Start}-${emp.s2End}</div>`
+      : `<div style="font-size:0.72rem;color:var(--text3);">الدوام: ${emp.s1Start} - ${emp.s1End}</div>`;
+
+    return `
+      <div style="background:var(--card);border:1px solid ${isIn?'rgba(16,185,129,0.3)':'var(--border)'};border-radius:var(--radius);padding:16px;">
+        <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+          <div class="av" style="background:${emp.color};width:38px;height:38px;font-size:1rem;">${emp.name.charAt(0)}</div>
+          <div>
+            <div style="font-weight:800;font-size:0.88rem;">${emp.name}</div>
+            <div style="font-size:0.72rem;color:var(--text3);">${emp.id} · ${emp.dept}</div>
+          </div>
+        </div>
+        ${shifts}
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-top:10px;">
+          ${statusBadge}
+          <div style="font-size:0.75rem;color:var(--text3);">
+            ${inRec ? `دخل: ${inRec.inTime}` : '-'}
+            ${inRec?.outTime ? ` | خرج: ${inRec.outTime}` : ''}
+          </div>
+        </div>
+        ${ded > 0 ? `<div style="font-size:0.72rem;color:var(--danger);margin-top:6px;">خصم: ${fmtCurrency(ded)}</div>` : ''}
+      </div>
+    `;
+  }).join('');
+}
+
+// ---- MANAGER: EMPLOYEES ----
+function render_mgr_employees(el){
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">👥 الموظفون</div><div class="ph-sub">إجمالي: ${DB.employees.length} موظف</div></div>
+      <button class="btn btn-primary" onclick="openModal('modal-add-emp')">➕ إضافة موظف</button>
+    </div>
+    <div style="display:flex;gap:10px;margin-bottom:16px;">
+      <div class="search-wrap"><span>🔍</span><input id="emp-search-input" placeholder="ابحث..." oninput="filterEmployeesTable()" /></div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>#</th><th>الموظف</th><th>القسم</th><th>نوع الشفت</th><th>أوقات الدوام</th><th>الراتب</th><th>🔐 رمز</th><th>إجراءات</th></tr></thead>
+          <tbody id="emp-tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  renderEmpTable();
+}
+
+function renderEmpTable(){
+  const q = (document.getElementById('emp-search-input')?.value || '').toLowerCase();
+  const tbody = document.getElementById('emp-tbl-body');
+  if(!tbody) return;
+  const filtered = DB.employees.filter(e => e.name.toLowerCase().includes(q) || e.id.toLowerCase().includes(q));
+  if(filtered.length === 0){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:20px;">لا يوجد موظفون</td></tr>'; return; }
+  tbody.innerHTML = filtered.map((e,i) => {
+    const shiftInfo = e.shiftType === 2
+      ? `<div style="font-size:0.72rem;"><span class="shift-tag st-1">ش1: ${e.s1Start}-${e.s1End}</span> <span class="shift-tag st-2" style="margin-right:4px;">ش2: ${e.s2Start}-${e.s2End}</span></div>`
+      : `<span class="shift-tag st-1">ش1: ${e.s1Start}-${e.s1End}</span>`;
+    return `<tr>
+      <td style="color:var(--text3)">${i+1}</td>
+      <td><div class="emp-cell"><div class="av" style="background:${e.color}">${e.name.charAt(0)}</div><div class="emp-cell-info"><div class="name">${e.name}</div><div class="sub">${e.id}</div></div></div></td>
+      <td>${e.dept}</td>
+      <td><span class="badge b-blue">${e.shiftType === 2 ? 'شفتين' : 'شفت واحد'}</span></td>
+      <td>${shiftInfo}</td>
+      <td style="font-weight:700;color:var(--success);">${fmtCurrency(e.salary)}</td>
+      <td>${e.pin ? '<span class="badge b-green">✅ محدد</span>' : '<span class="badge b-red">⚠️ غير محدد</span>'}</td>
+      <td style="display:flex;gap:5px;">
+        <button class="btn btn-ghost btn-sm" onclick="openEditEmp('${e.id}')">✏️ تعديل</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteEmp('${e.id}')">🗑️</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterEmployeesTable(){ renderEmpTable(); }
+
+function deleteEmp(id){
+  if(!confirm('هل تريد حذف هذا الموظف؟')) return;
+  DB.employees = DB.employees.filter(e => e.id !== id);
+  saveDB();
+  api('deleteEmployee', {id}).catch(()=>{});
+  mgr_page('employees');
+  showNotif('تم حذف الموظف','info');
+}
+
+// ---- MANAGER: ATTENDANCE ----
+function render_mgr_attendance(el){
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">📋 سجل الحضور</div><div class="ph-sub">تاريخ جميع سجلات الدخول والخروج</div></div>
+      <div style="display:flex;gap:8px;">
+        <input type="date" id="att-filter-date" value="${todayStr()}" style="width:auto;padding:7px 12px;" onchange="renderAttTable()" />
+        <select id="att-filter-emp" style="width:auto;padding:7px 12px;" onchange="renderAttTable()">
+          <option value="">كل الموظفين</option>
+          ${DB.employees.map(e=>`<option value="${e.id}">${e.name}</option>`).join('')}
+        </select>
+      </div>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>الموظف</th><th>التاريخ</th><th>وقت الدخول</th><th>وقت الخروج</th><th>الشفت</th><th>تأخير</th><th>خصم</th><th>الحالة</th><th>الموقع</th></tr></thead>
+          <tbody id="att-tbl-body"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  renderAttTable();
+}
+
+function renderAttTable(){
+  const tbody = document.getElementById('att-tbl-body');
+  if(!tbody) return;
+  const dateF = document.getElementById('att-filter-date')?.value || '';
+  const empF = document.getElementById('att-filter-emp')?.value || '';
+  let recs = [...DB.attendance].reverse();
+  if(dateF) recs = recs.filter(a => a.date === dateF);
+  if(empF) recs = recs.filter(a => a.empId === empF);
+  if(recs.length === 0){ tbody.innerHTML='<tr><td colspan="8" style="text-align:center;color:var(--text3);padding:20px;">لا توجد سجلات</td></tr>'; return; }
+  tbody.innerHTML = recs.map(a => {
+    const emp = getEmp(a.empId);
+    if(!emp) return '';
+    const lateM = a.lateMin || 0;
+    const ded = calcDeduction(lateM);
+    const statusBadge = a.status === 'present' ? '<span class="badge b-green">حاضر</span>'
+      : a.status === 'late' ? '<span class="badge b-gold">متأخر</span>'
+      : '<span class="badge b-red">غائب</span>';
+    return `<tr>
+      <td><div class="emp-cell"><div class="av" style="background:${emp.color}">${emp.name.charAt(0)}</div><span style="font-weight:600;">${emp.name}</span></div></td>
+      <td>${a.date}</td>
+      <td style="font-variant-numeric:tabular-nums;">${a.inTime || '-'}</td>
+      <td style="font-variant-numeric:tabular-nums;">${a.outTime || '-'}</td>
+      <td><span class="shift-tag st-${a.shiftNum||1}">شفت ${a.shiftNum||1}</span></td>
+      <td style="color:${lateM>0?'var(--warning)':'var(--text3)'};">${lateM > 0 ? lateM+' د' : '-'}</td>
+      <td style="color:${ded>0?'var(--danger)':'var(--text3)'};">${ded > 0 ? fmtCurrency(ded) : '-'}</td>
+      <td>${statusBadge}</td>
+      <td>${a.lat && a.lng ? `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" style="color:var(--accent2);font-size:0.8rem;text-decoration:none;">📍 خريطة</a>` : '<span style="color:var(--text3);">-</span>'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- MANAGER: ABSENCES ----
+function render_mgr_absences(el){
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">❌ الغيابات</div><div class="ph-sub">سجل الغيابات اليدوية</div></div>
+      <button class="btn btn-danger" onclick="openAbsenceModal()">📋 تسجيل غياب</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>الموظف</th><th>التاريخ</th><th>السبب</th></tr></thead>
+          <tbody id="abs-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  const tbody = el.querySelector('#abs-tbl');
+  if(DB.absences.length === 0){ tbody.innerHTML='<tr><td colspan="3" style="text-align:center;color:var(--text3);padding:20px;">لا توجد سجلات غياب</td></tr>'; return; }
+  tbody.innerHTML = [...DB.absences].reverse().map(a => {
+    const emp = getEmp(a.empId);
+    return `<tr>
+      <td><div class="emp-cell"><div class="av" style="background:${emp?.color||'#64748b'}">${emp?.name?.charAt(0)||'؟'}</div><span style="font-weight:600;">${emp?.name||a.empId}</span></div></td>
+      <td>${a.date}</td>
+      <td>${a.reason || '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- MANAGER: BONUSES ----
+function render_mgr_bonuses(el){
+  const total = DB.bonuses.reduce((s,b) => s+Number(b.amount||0),0);
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">🏆 المكافآت</div><div class="ph-sub">إجمالي المكافآت: ${fmtCurrency(total)}</div></div>
+      <button class="btn btn-gold" onclick="openBonusModal()">🏆 إضافة مكافأة</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>الموظف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th></tr></thead>
+          <tbody id="bon-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  const tbody = el.querySelector('#bon-tbl');
+  if(DB.bonuses.length === 0){ tbody.innerHTML='<tr><td colspan="4" style="text-align:center;color:var(--text3);padding:20px;">لا توجد مكافآت</td></tr>'; return; }
+  tbody.innerHTML = [...DB.bonuses].reverse().map(b => {
+    const emp = getEmp(b.empId);
+    return `<tr>
+      <td><div class="emp-cell"><div class="av" style="background:${emp?.color||'#f59e0b'}">${emp?.name?.charAt(0)||'؟'}</div><span style="font-weight:600;">${emp?.name||b.empId}</span></div></td>
+      <td style="color:var(--gold-light);font-weight:700;">${fmtCurrency(b.amount)}</td>
+      <td>${b.reason || '-'}</td>
+      <td>${b.date}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- MANAGER: DEDUCTIONS ----
+function render_mgr_deductions(el){
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">💸 الخصومات</div><div class="ph-sub">خصومات التأخير والخصومات اليدوية</div></div>
+      <button class="btn btn-danger btn-sm" onclick="openManualDedModal()">💸 خصم يدوي</button>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title">⚙️ إعداد نظام الخصم</span></div>
+      <div class="card-body">
+        <div class="alert a-info" id="ded-current-rate">
+          📌 سعر الخصم الحالي: <strong>${DB.settings.deductPerMin} د.ع / دقيقة</strong> — سماحية: <strong>${DB.settings.lateThreshold} دقيقة</strong>
+        </div>
+        <div class="form-grid">
+          <div class="fg">
+            <label>مبلغ الخصم لكل دقيقة تأخير (د.ع)</label>
+            <input type="number" id="ded-per-min" value="${DB.settings.deductPerMin}" placeholder="150" min="0" />
+          </div>
+          <div class="fg">
+            <label>سماحية التأخير (بالدقائق)</label>
+            <input type="number" id="late-threshold" value="${DB.settings.lateThreshold}" placeholder="15" min="0" />
+          </div>
+        </div>
+        <button class="btn btn-primary" onclick="saveDedSettings()">💾 حفظ الإعدادات</button>
+      </div>
+    </div>
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title">⏰ خصومات التأخير</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>الموظف</th><th>مرات التأخير</th><th>إجمالي الدقائق</th><th>خصم التأخير</th></tr></thead>
+          <tbody id="ded-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-header"><span class="card-title">💸 الخصومات اليدوية</span></div>
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>الموظف</th><th>المبلغ</th><th>السبب</th><th>التاريخ</th><th>حذف</th></tr></thead>
+          <tbody id="mded-tbl"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  // Late deductions
+  const tbody = el.querySelector('#ded-tbl');
+  tbody.innerHTML = DB.employees.map(emp => {
+    const recs = DB.attendance.filter(a => a.empId === emp.id && (a.lateMin||0) > 0);
+    const totalMin = recs.reduce((s,a) => s+(a.lateMin||0),0);
+    const totalDed = calcDeduction(totalMin);
+    return `<tr>
+      <td><div class="emp-cell"><div class="av" style="background:${emp.color}">${emp.name.charAt(0)}</div><span style="font-weight:600;">${emp.name}</span></div></td>
+      <td>${recs.length} مرة</td>
+      <td style="color:var(--warning);">${totalMin} دقيقة</td>
+      <td style="color:var(--danger);font-weight:700;">${fmtCurrency(totalDed)}</td>
+    </tr>`;
+  }).join('');
+  // Manual deductions
+  const mdtbody = el.querySelector('#mded-tbl');
+  const mdeds = DB.manualDeductions || [];
+  if(mdeds.length === 0){
+    mdtbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--text3);padding:14px;">لا توجد خصومات يدوية</td></tr>';
+  } else {
+    mdtbody.innerHTML = [...mdeds].reverse().map((d,i) => {
+      const emp = getEmp(d.empId);
+      const realIdx = mdeds.length - 1 - i;
+      return `<tr>
+        <td><div class="emp-cell"><div class="av" style="background:${emp?.color||'#64748b'}">${emp?.name?.charAt(0)||'؟'}</div><span style="font-weight:600;">${emp?.name||d.empId}</span></div></td>
+        <td style="color:var(--danger);font-weight:700;">- ${fmtCurrency(d.amount)}</td>
+        <td>${d.reason||'-'}</td>
+        <td>${d.date}</td>
+        <td><button class="btn btn-danger btn-sm" onclick="deleteManualDed(${realIdx})">🗑️</button></td>
+      </tr>`;
+    }).join('');
+  }
+}
+
+function saveDedSettings(){
+  const dedInput = document.getElementById('ded-per-min');
+  const latInput = document.getElementById('late-threshold');
+  const dedVal = dedInput ? parseFloat(dedInput.value) : NaN;
+  const latVal = latInput ? parseInt(latInput.value) : NaN;
+  DB.settings.deductPerMin = isNaN(dedVal) ? DB.settings.deductPerMin : dedVal;
+  DB.settings.lateThreshold = isNaN(latVal) ? DB.settings.lateThreshold : latVal;
+  saveDB();
+  api('saveSettings', {settings: DB.settings}).catch(()=>{});
+  localStorage.setItem('fp_settings_backup', JSON.stringify(DB.settings));
+  showNotif('✅ تم الحفظ — خصم الدقيقة: '+DB.settings.deductPerMin+' د.ع','success');
+  mgr_page('deductions');
+}
+
+// ---- MANAGER: REQUESTS ----
+function render_mgr_requests(el){
+  const pending = DB.requests.filter(r=>r.status==='pending');
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">📩 الطلبات</div><div class="ph-sub">${pending.length} طلب بانتظار الموافقة</div></div>
+    </div>
+    <div class="tabs">
+      <div class="tab active" onclick="filterReqs(this,'all')">الكل (${DB.requests.length})</div>
+      <div class="tab" onclick="filterReqs(this,'pending')">قيد الانتظار (${pending.length})</div>
+      <div class="tab" onclick="filterReqs(this,'approved')">موافق (${DB.requests.filter(r=>r.status==='approved').length})</div>
+      <div class="tab" onclick="filterReqs(this,'rejected')">مرفوض (${DB.requests.filter(r=>r.status==='rejected').length})</div>
+    </div>
+    <div id="reqs-list"></div>
+  `;
+  renderReqsList('all');
+}
+
+function filterReqs(tab, filter){
+  document.querySelectorAll('.tabs .tab').forEach(t=>t.classList.remove('active'));
+  tab.classList.add('active');
+  renderReqsList(filter);
+}
+
+function renderReqsList(filter){
+  const cont = document.getElementById('reqs-list');
+  if(!cont) return;
+  let reqs = [...DB.requests].reverse();
+  if(filter !== 'all') reqs = reqs.filter(r => r.status === filter);
+  if(reqs.length === 0){ cont.innerHTML='<div class="alert a-info">لا توجد طلبات</div>'; return; }
+  cont.innerHTML = reqs.map(r => {
+    const emp = getEmp(r.empId);
+    const typeIcon = r.type === 'loan' ? '💰' : r.type === 'leave_full' ? '📅' : '⏱️';
+    const typeLabel = r.type === 'loan' ? 'سلفة' : r.type === 'leave_full' ? 'إجازة يوم كامل' : 'إجازة زمنية';
+    const statusBadge = r.status === 'pending' ? '<span class="badge b-gold">⏳ قيد الانتظار</span>'
+      : r.status === 'approved' ? '<span class="badge b-green">✅ موافق</span>'
+      : r.status === 'settled' ? '<span class="badge b-blue">✔️ مُسوَّى (تصفير)</span>'
+      : '<span class="badge b-red">❌ مرفوض</span>';
+    const actions = r.status === 'pending' ? `
+      <button class="btn btn-success btn-sm" onclick="handleReq('${r.id}','approved')">✅ موافقة</button>
+      <button class="btn btn-danger btn-sm" onclick="handleReq('${r.id}','rejected')">❌ رفض</button>
+    ` : '';
+    const details = r.type === 'loan'
+      ? `المبلغ: <strong>${fmtCurrency(r.amount)}</strong> · أقساط: ${r.months}`
+      : r.type === 'leave_full'
+      ? `من: ${r.from} إلى: ${r.to}`
+      : `التاريخ: ${r.date} · من ${r.fromTime} إلى ${r.toTime}`;
+    return `
+      <div class="req-card">
+        <div class="req-icon">${typeIcon}</div>
+        <div class="req-info">
+          <div class="req-title">${typeLabel} - ${emp?.name||r.empId}</div>
+          <div class="req-sub">${details}</div>
+          ${r.reason ? `<div class="req-sub" style="margin-top:2px;">السبب: ${r.reason}</div>` : ''}
+          <div style="margin-top:6px;">${statusBadge}</div>
+        </div>
+        <div class="req-actions">${actions}</div>
+      </div>
+    `;
+  }).join('');
+}
+
+function handleReq(id, status){
+  const req = DB.requests.find(r => r.id === id);
+  if(!req) return;
+  const prevStatus = req.status;
+  req.status = status;
+
+  const emp = getEmp(req.empId);
+  if(!DB.manualDeductions) DB.manualDeductions = [];
+
+  // ── LOAN ──────────────────────────────────────────────────────────────
+  if(req.type === 'loan'){
+    if(status === 'approved' && prevStatus !== 'approved'){
+      // Add as debt (manual deduction)
+      const loanDed = {
+        empId: req.empId,
+        empName: getEmp(req.empId)?.name||req.empId,
+        amount: Number(req.amount),
+        reason: `سلفة معتمدة (${req.months} أقساط) — ${req.reason||''}`.trim().replace(/— $/, ''),
+        date: todayStr(),
+        reqId: req.id,
+        type: 'loan'
+      };
+      DB.manualDeductions.push(loanDed);
+      api('saveDeduction', loanDed).catch(()=>{});
+      showNotif(`✅ تمت الموافقة — خُصم ${fmtCurrency(req.amount)} من راتب ${emp?.name||''}`, 'success');
+    } else if(status === 'rejected' && prevStatus === 'approved'){
+      // Undo: remove the matching loan deduction
+      DB.manualDeductions = DB.manualDeductions.filter(d => d.reqId !== req.id);
+      showNotif(`❌ تم رفض السلفة — تم إلغاء الخصم`, 'danger');
+    } else {
+      showNotif(status === 'approved' ? 'تمت الموافقة ✅' : 'تم الرفض ❌', status === 'approved' ? 'success' : 'danger');
+    }
+  }
+
+  // ── FULL DAY LEAVE ────────────────────────────────────────────────────
+  else if(req.type === 'leave_full'){
+    if(status === 'rejected' && prevStatus !== 'rejected'){
+      // Deduct one day salary per rejected leave day
+      const dailySalary = Math.round((emp?.salary || 0) / 7.5);
+      // Count days
+      const from = new Date(req.from); const to = new Date(req.to);
+      let days = 0;
+      for(let d = new Date(from); d <= to; d.setDate(d.getDate()+1)) days++;
+      const deductAmt = dailySalary * days;
+      DB.manualDeductions.push({
+        empId: req.empId,
+        amount: deductAmt,
+        reason: `غياب ${days > 1 ? days+' أيام' : 'يوم'} غير مبرر (${req.from}${days>1?' → '+req.to:''}) — طلب مرفوض`,
+        date: todayStr(),
+        reqId: req.id,
+        type: 'leave_rejected'
+      });
+      showNotif(`❌ تم الرفض — خُصم ${fmtCurrency(deductAmt)} (${days} يوم × ${fmtCurrency(dailySalary)})`, 'danger');
+    } else if(status === 'approved' && prevStatus === 'rejected'){
+      // Undo the deduction if re-approved
+      DB.manualDeductions = DB.manualDeductions.filter(d => d.reqId !== req.id);
+      showNotif('✅ تمت الموافقة — تم إلغاء خصم الغياب', 'success');
+    } else if(status === 'approved'){
+      showNotif(`✅ تمت الموافقة على إجازة ${emp?.name||''}`, 'success');
+    } else {
+      showNotif('تم رفض الطلب ❌', 'danger');
+    }
+  }
+
+  // ── TIME LEAVE ────────────────────────────────────────────────────────
+  else if(req.type === 'leave_time'){
+    // Time leave: no financial effect either way
+    showNotif(status === 'approved' ? `✅ تمت الموافقة على الإجازة الزمنية` : '❌ تم رفض الإجازة الزمنية',
+              status === 'approved' ? 'success' : 'danger');
+  }
+
+  else {
+    showNotif(status === 'approved' ? 'تمت الموافقة ✅' : 'تم الرفض ❌', status === 'approved' ? 'success' : 'danger');
+  }
+
+  saveDB();
+  api('updateRequest', {id, status}).catch(()=>{});
+  mgr_page('requests');
+}
+
+// ---- MANAGER: SETTINGS ----
+function render_mgr_settings(el){
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">⚙️ الإعدادات</div></div></div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">🏢 معلومات المؤسسة</span></div>
+        <div class="card-body">
+          <div class="fg"><label>اسم المؤسسة</label><input id="set-org" value="${DB.settings.orgName||''}" /></div>
+          <button class="btn btn-primary" onclick="saveOrgSettings()">💾 حفظ</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">🔐 رمز المدير السري</span></div>
+        <div class="card-body">
+          <div class="alert a-warn" style="margin-bottom:12px;">⚠️ احتفظ بهذا الرمز بسرية تامة — به تدخل واجهة المدير</div>
+          <div class="fg">
+            <label>الرمز السري الحالي للمدير</label>
+            <div style="display:flex;gap:8px;align-items:center;">
+              <input id="set-mgr-pin" type="password" value="${DB.settings.managerPin||'5566'}" style="flex:1;letter-spacing:4px;" maxlength="10" />
+              <button type="button" onclick="togglePinVis('set-mgr-pin',this)" style="background:none;border:1px solid var(--border);border-radius:8px;padding:8px 10px;cursor:pointer;color:var(--text3);">👁</button>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveMgrPin()">🔐 تغيير رمز المدير</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">💸 إعدادات الخصم</span></div>
+        <div class="card-body">
+          <div style="background:rgba(59,130,246,0.08);border:1px solid rgba(59,130,246,0.2);border-radius:8px;padding:10px 12px;margin-bottom:10px;font-size:0.82rem;">
+            📌 الحالي: <strong style="color:var(--accent2);">${DB.settings.deductPerMin} د.ع/دقيقة</strong>
+          </div>
+          <div class="fg"><label>خصم الدقيقة الواحدة (د.ع)</label><input type="number" id="set-ded" value="${DB.settings.deductPerMin}" min="0" /></div>
+          <div class="fg"><label>سماحية التأخير (دقيقة)</label><input type="number" id="set-late" value="${DB.settings.lateThreshold||15}" min="0" /></div>
+          <button class="btn btn-primary" onclick="saveAllSettings()">💾 حفظ</button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">📊 إحصائيات النظام</span></div>
+        <div class="card-body">
+          ${[
+            ['👥 عدد الموظفين', DB.employees.length],
+            ['📋 إجمالي سجلات الحضور', DB.attendance.length],
+            ['🏆 إجمالي المكافآت', DB.bonuses.length],
+            ['📩 إجمالي الطلبات', DB.requests.length],
+          ].map(([l,v])=>`<div class="ded-row"><span style="color:var(--text2);">${l}</span><span style="font-weight:700;color:var(--accent2);">${v}</span></div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">🗑️ إدارة البيانات</span></div>
+        <div class="card-body">
+          <div class="alert a-warn">⚠️ الحذف نهائي ولا يمكن التراجع عنه</div>
+          <div style="display:flex;flex-direction:column;gap:8px;">
+            <button class="btn btn-danger" onclick="clearAttendanceData()">🗑️ حذف سجلات الحضور</button>
+            <button class="btn btn-ghost" onclick="if(confirm('هل أنت متأكد؟ سيتم حذف كل البيانات'))location.reload()">🔄 إعادة تعيين كاملة</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+function saveMgrPin(){
+  const pin = document.getElementById('set-mgr-pin')?.value?.trim();
+  if(!pin){ showNotif('⚠️ يرجى إدخال رمز سري','danger'); return; }
+  DB.settings.managerPin = pin;
+  saveDB();
+  api('saveSettings', {settings: {managerPin: pin}}).catch(()=>{});
+  showNotif('تم تغيير رمز المدير السري 🔐','success');
+}
+
+function saveOrgSettings(){
+  DB.settings.orgName = document.getElementById('set-org')?.value || '';
+  saveDB(); showNotif('تم الحفظ ✅');
+}
+function saveAllSettings(){
+  const dedInput = document.getElementById('set-ded');
+  const latInput = document.getElementById('set-late');
+  const dedVal = dedInput ? parseFloat(dedInput.value) : NaN;
+  const latVal = latInput ? parseInt(latInput.value) : NaN;
+  DB.settings.deductPerMin = isNaN(dedVal) ? DB.settings.deductPerMin : dedVal;
+  DB.settings.lateThreshold = isNaN(latVal) ? DB.settings.lateThreshold : latVal;
+  saveDB();
+  api('saveSettings', {settings: DB.settings}).catch(()=>{});
+  localStorage.setItem('fp_settings_backup', JSON.stringify(DB.settings));
+  showNotif('✅ تم الحفظ — خصم الدقيقة: '+DB.settings.deductPerMin+' د.ع','success');
+  mgr_page('settings');
+}
+function clearAttendanceData(){
+  if(!confirm('حذف جميع سجلات الحضور؟')) return;
+  DB.attendance = []; saveDB();
+  showNotif('تم حذف سجلات الحضور','info');
+}
+
+// =============================================
+// ============ EMPLOYEE UI ==================
+// =============================================
+function buildEmployeeUI(){
+  const emp = getEmp(currentEmpId);
+  document.getElementById('app-title').textContent = 'بوابة الموظف';
+  document.getElementById('topbar-name').textContent = emp?.name || 'موظف';
+  document.getElementById('topbar-av').style.background = emp?.color || '#10b981';
+  document.getElementById('topbar-av').textContent = emp?.name?.charAt(0) || 'م';
+
+  const sidebar = document.getElementById('sidebar');
+  sidebar.innerHTML = `
+    <div class="sidebar-section-label">الرئيسية</div>
+    <div class="nav-item active" onclick="emp_page('home')" id="enav-home"><span class="n-icon">🏠</span> صفحتي</div>
+    <div class="nav-item" onclick="emp_page('checkin')" id="enav-checkin"><span class="n-icon">🖐️</span> تسجيل الحضور</div>
+    <div class="sidebar-section-label">سجلاتي</div>
+    <div class="nav-item" onclick="emp_page('myattendance')" id="enav-myattendance"><span class="n-icon">📋</span> حضوري وانصرافي</div>
+    <div class="nav-item" onclick="emp_page('myfinance')" id="enav-myfinance"><span class="n-icon">💰</span> ملفي المالي</div>
+    <div class="sidebar-section-label">الطلبات</div>
+    <div class="nav-item" onclick="emp_page('requests')" id="enav-requests"><span class="n-icon">📩</span> طلباتي</div>
+    <div class="nav-item" onclick="emp_page('newrequest')" id="enav-newrequest"><span class="n-icon">➕</span> طلب جديد</div>
+  `;
+
+  emp_page('home');
+
+  // Show quick action popup after short delay
+  setTimeout(() => showQuickActionPopup(), 300);
+}
+
+// ── Quick Action Popup ──────────────────────────────────────────────
+function showQuickActionPopup(){
+  const emp = getEmp(currentEmpId);
+  if(!emp) return;
+
+  const today = todayStr();
+  const todayRecs = DB.attendance.filter(a => a.empId === currentEmpId && a.date === today);
+  const openRec = todayRecs.find(a => a.inTime && !a.outTime);
+  const isCheckedIn = !!openRec;
+
+  // Determine shift options
+  const now = new Date();
+  const hh = String(now.getHours()).padStart(2,'0');
+  const mm = String(now.getMinutes()).padStart(2,'0');
+  const timeNow = hh+':'+mm;
+
+  const shiftBtns = emp.shiftType === 2 ? `
+    <div style="margin-bottom:14px;">
+      <div style="font-size:0.78rem;color:var(--text3);margin-bottom:8px;font-weight:700;">اختر الشفت:</div>
+      <div style="display:flex;gap:8px;">
+        <button id="qa-shift-1" onclick="qaSelectShift(1)" style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--accent);background:rgba(59,130,246,0.15);color:var(--accent2);font-family:'Cairo',sans-serif;font-weight:800;cursor:pointer;font-size:0.85rem;">
+          شفت 1<br><span style="font-size:0.72rem;font-weight:500;">${emp.s1Start} - ${emp.s1End}</span>
+        </button>
+        <button id="qa-shift-2" onclick="qaSelectShift(2)" style="flex:1;padding:10px;border-radius:10px;border:2px solid var(--border);background:rgba(0,0,0,0.2);color:var(--text3);font-family:'Cairo',sans-serif;font-weight:800;cursor:pointer;font-size:0.85rem;">
+          شفت 2<br><span style="font-size:0.72rem;font-weight:500;">${emp.s2Start} - ${emp.s2End}</span>
+        </button>
+      </div>
+    </div>` : `
+    <div style="background:rgba(59,130,246,0.08);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.82rem;color:var(--text3);">وقت الدوام</span>
+      <span style="font-weight:800;color:var(--accent2);">${emp.s1Start} - ${emp.s1End}</span>
+    </div>`;
+
+  // Status card
+  const statusCard = isCheckedIn ? `
+    <div style="background:rgba(16,185,129,0.08);border:1px solid rgba(16,185,129,0.2);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.82rem;color:var(--text3);">✅ مسجل دخول منذ</span>
+      <span style="font-weight:800;color:var(--success);">${openRec.inTime}</span>
+    </div>` : `
+    <div style="background:rgba(239,68,68,0.06);border:1px solid rgba(239,68,68,0.15);border-radius:10px;padding:10px 14px;margin-bottom:14px;display:flex;justify-content:space-between;align-items:center;">
+      <span style="font-size:0.82rem;color:var(--text3);">❌ لم تسجل دخولك بعد</span>
+      <span style="font-weight:800;color:var(--text2);">${timeNow}</span>
+    </div>`;
+
+  const old = document.getElementById('quick-action-overlay');
+  if(old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'quick-action-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.82);z-index:9997;display:flex;align-items:center;justify-content:center;padding:20px;animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:1px solid var(--border2);border-radius:20px;padding:24px;max-width:360px;width:100%;animation:modalIn 0.25s ease;">
+
+      <!-- Header -->
+      <div style="display:flex;align-items:center;gap:12px;margin-bottom:20px;">
+        <div style="width:46px;height:46px;border-radius:50%;background:${emp.color};display:flex;align-items:center;justify-content:center;font-size:1.3rem;font-weight:900;flex-shrink:0;">${emp.name.charAt(0)}</div>
+        <div>
+          <div style="font-weight:900;font-size:1rem;">أهلاً، ${emp.name.split(' ')[0]}!</div>
+          <div style="font-size:0.75rem;color:var(--text3);">${today}</div>
+        </div>
+        <div style="margin-right:auto;font-size:1.1rem;font-weight:800;color:var(--accent2);">${timeNow}</div>
+      </div>
+
+      <!-- Status -->
+      ${statusCard}
+
+      <!-- Shift selector -->
+      ${shiftBtns}
+
+      <!-- Action buttons -->
+      <div style="display:flex;flex-direction:column;gap:10px;">
+        ${!isCheckedIn ? `
+        <button onclick="qaCheckIn()" style="
+          width:100%;padding:16px;border-radius:12px;border:none;
+          background:linear-gradient(135deg,#059669,#10b981);
+          color:white;font-family:'Cairo',sans-serif;
+          font-size:1rem;font-weight:900;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;gap:10px;
+          box-shadow:0 4px 20px rgba(16,185,129,0.35);">
+          🖐️ تسجيل دخول
+        </button>` : `
+        <button onclick="qaCheckOut()" style="
+          width:100%;padding:16px;border-radius:12px;border:none;
+          background:linear-gradient(135deg,#dc2626,#ef4444);
+          color:white;font-family:'Cairo',sans-serif;
+          font-size:1rem;font-weight:900;cursor:pointer;
+          display:flex;align-items:center;justify-content:center;gap:10px;
+          box-shadow:0 4px 20px rgba(239,68,68,0.35);">
+          🚪 تسجيل انصراف
+        </button>`}
+
+        <button onclick="document.getElementById('quick-action-overlay').remove()" style="
+          width:100%;padding:12px;border-radius:12px;
+          border:1px solid var(--border);background:rgba(255,255,255,0.04);
+          color:var(--text2);font-family:'Cairo',sans-serif;
+          font-size:0.88rem;font-weight:700;cursor:pointer;">
+          ← رجوع للقائمة الرئيسية
+        </button>
+      </div>
+
+      <!-- Location note -->
+      <div style="text-align:center;margin-top:12px;font-size:0.72rem;color:var(--text3);">
+        📍 سيتم تسجيل موقعك عند البصمة
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  window._qaShift = 1; // default shift 1
+}
+
+function qaSelectShift(num){
+  window._qaShift = num;
+  const btn1 = document.getElementById('qa-shift-1');
+  const btn2 = document.getElementById('qa-shift-2');
+  if(!btn1||!btn2) return;
+  if(num===1){
+    btn1.style.borderColor='var(--accent)'; btn1.style.background='rgba(59,130,246,0.15)'; btn1.style.color='var(--accent2)';
+    btn2.style.borderColor='var(--border)'; btn2.style.background='rgba(0,0,0,0.2)'; btn2.style.color='var(--text3)';
+  } else {
+    btn2.style.borderColor='var(--accent)'; btn2.style.background='rgba(59,130,246,0.15)'; btn2.style.color='var(--accent2)';
+    btn1.style.borderColor='var(--border)'; btn1.style.background='rgba(0,0,0,0.2)'; btn1.style.color='var(--text3)';
+  }
+}
+
+function qaCheckIn(){
+  window._selShift = window._qaShift || 1;
+  document.getElementById('quick-action-overlay')?.remove();
+  checkIn();
+}
+
+function qaCheckOut(){
+  document.getElementById('quick-action-overlay')?.remove();
+  checkOut();
+}
+
+function emp_page(page){
+  currentPage = page;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  const el = document.getElementById('enav-'+page);
+  if(el) el.classList.add('active');
+  const content = document.getElementById('content');
+  content.innerHTML = '';
+  const div = document.createElement('div');
+  div.className = 'page active';
+  div.id = 'pg-'+page;
+  content.appendChild(div);
+  const fn = window['render_emp_'+page];
+  if(fn) fn(div);
+}
+
+// ---- EMPLOYEE: HOME ----
+function render_emp_home(el){
+  const emp = getEmp(currentEmpId);
+  if(!emp) return;
+  const today = todayStr();
+  const todayRecs = DB.attendance.filter(a => a.empId === currentEmpId && a.date === today);
+  const inRec = todayRecs.find(a => a.inTime && !a.outTime) || todayRecs.find(a => a.inTime);
+  const isIn = todayRecs.some(a => a.inTime && !a.outTime);
+  const lateM = inRec?.lateMin || 0;
+  const ded = calcDeduction(lateM);
+
+  const myBonuses = DB.bonuses.filter(b => b.empId === currentEmpId);
+  const totalBonus = myBonuses.reduce((s,b) => s+Number(b.amount||0), 0);
+  const myReqs = DB.requests.filter(r => r.empId === currentEmpId);
+  const pendingReqs = myReqs.filter(r => r.status === 'pending').length;
+
+  const shiftInfo = emp.shiftType === 2
+    ? `شفت 1: ${emp.s1Start}-${emp.s1End} · شفت 2: ${emp.s2Start}-${emp.s2End}`
+    : `الدوام: ${emp.s1Start} - ${emp.s1End}`;
+
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">🏠 صفحتي</div><div class="ph-sub">${dateAr(today)}</div></div></div>
+    <div class="emp-profile">
+      <div class="ep-av" style="background:${emp.color}">${emp.name.charAt(0)}</div>
+      <div>
+        <div class="ep-name">${emp.name}</div>
+        <div class="ep-sub">${emp.id} · ${emp.dept}</div>
+        <div class="ep-tags">
+          <span class="badge b-blue">${shiftInfo}</span>
+          <span class="badge b-gray">${emp.shiftType===2?'شفتين':'شفت واحد'}</span>
+        </div>
+      </div>
+    </div>
+    <div class="stats-row">
+      <div class="stat-card ${isIn?'sc-green':'sc-red'}">
+        <div class="sc-icon">${isIn?'✅':'❌'}</div>
+        <div class="sc-value" style="font-size:1.1rem;">${isIn?'حاضر':'غائب'}</div>
+        <div class="sc-label">حالتي الآن</div>
+      </div>
+      <div class="stat-card sc-blue">
+        <div class="sc-icon">📋</div>
+        <div class="sc-value">${DB.attendance.filter(a=>a.empId===currentEmpId&&a.inTime).length}</div>
+        <div class="sc-label">إجمالي أيام الحضور</div>
+      </div>
+      <div class="stat-card sc-gold">
+        <div class="sc-icon">🏆</div>
+        <div class="sc-value" style="font-size:1rem;">${(totalBonus/1000).toFixed(0)}k</div>
+        <div class="sc-label">مكافآتي (د.ع)</div>
+      </div>
+      <div class="stat-card sc-purple">
+        <div class="sc-icon">📩</div>
+        <div class="sc-value">${pendingReqs}</div>
+        <div class="sc-label">طلبات قيد الانتظار</div>
+      </div>
+    </div>
+    <div class="g2">
+      <div class="card">
+        <div class="card-header"><span class="card-title">📍 وضعي اليوم</span></div>
+        <div class="card-body">
+          ${inRec ? `
+            <div class="ded-row"><span>وقت الدخول</span><span style="font-weight:700;color:var(--success);">${inRec.inTime}</span></div>
+            <div class="ded-row"><span>وقت الخروج</span><span style="font-weight:700;color:${inRec.outTime?'var(--accent2)':'var(--text3)'};">${inRec.outTime||'لم يسجّل بعد'}</span></div>
+            <div class="ded-row"><span>الشفت</span><span class="shift-tag st-${inRec.shiftNum||1}">شفت ${inRec.shiftNum||1}</span></div>
+            ${lateM > 0 ? `<div class="ded-row"><span>تأخير</span><span style="color:var(--warning);">${lateM} دقيقة</span></div>` : ''}
+            ${ded > 0 ? `<div class="ded-row"><span>خصم التأخير</span><span style="color:var(--danger);font-weight:700;">${fmtCurrency(ded)}</span></div>` : ''}
+          ` : `<div class="alert a-warn">⚠️ لم يتم تسجيل حضورك اليوم بعد</div>`}
+          <button class="btn btn-primary" style="width:100%;justify-content:center;margin-top:12px;" onclick="emp_page('checkin')">
+            ${isIn ? '🚪 تسجيل انصراف' : '🖐️ تسجيل حضور'}
+          </button>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-header"><span class="card-title">⚡ إجراءات سريعة</span></div>
+        <div class="card-body" style="display:flex;flex-direction:column;gap:8px;">
+          <button class="btn btn-primary" onclick="openModal('modal-loan')" style="justify-content:center;">💰 طلب سلفة</button>
+          <button class="btn btn-ghost" onclick="openModal('modal-leave-full')" style="justify-content:center;">📅 إجازة يوم كامل</button>
+          <button class="btn btn-ghost" onclick="openModal('modal-leave-time')" style="justify-content:center;">⏱️ إجازة زمنية</button>
+        </div>
+      </div>
+    </div>
+  `;
+}
+
+// ---- EMPLOYEE: CHECK IN ----
+function render_emp_checkin(el){
+  const emp = getEmp(currentEmpId);
+  const today = todayStr();
+  const todayRecs = DB.attendance.filter(a => a.empId === currentEmpId && a.date === today);
+  const openRec = todayRecs.find(a => a.inTime && !a.outTime);
+  const isCheckedIn = !!openRec;
+
+  const shiftBtns = emp.shiftType === 2 ? `
+    <div style="display:flex;gap:8px;justify-content:center;margin-bottom:8px;">
+      <button class="btn b-blue btn-sm ${!window._selShift||window._selShift===1?'btn-primary':'btn-ghost'}" onclick="window._selShift=1;this.className='btn btn-primary btn-sm';this.nextElementSibling.className='btn btn-ghost btn-sm'">شفت 1</button>
+      <button class="btn btn-ghost btn-sm" onclick="window._selShift=2;this.className='btn btn-primary btn-sm';this.previousElementSibling.className='btn btn-ghost btn-sm'">شفت 2</button>
+    </div>` : '';
+
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">🖐️ تسجيل الحضور</div><div class="ph-sub">اليوم: ${dateAr(today)}</div></div></div>
+    <div style="max-width:400px;margin:0 auto;">
+      <div class="clock-widget">
+        <div class="cw-time" id="cw-time">--:--:--</div>
+        <div class="cw-date">${dateAr(today)}</div>
+        <div class="cw-shift" style="color:var(--text3);">
+          الدوام: ${emp?.shiftType===2 ? `ش1: ${emp.s1Start}-${emp.s1End} | ش2: ${emp.s2Start}-${emp.s2End}` : `${emp?.s1Start}-${emp?.s1End}`}
+        </div>
+      </div>
+      ${shiftBtns}
+      <div style="text-align:center;margin-bottom:20px;">
+        <div class="scan-area" id="scan-fp" onclick="doScan()">
+          <div class="scan-line"></div>
+          <svg class="fp-svg" viewBox="0 0 100 130" fill="none">
+            <path d="M50,5 C30,5 10,25 10,50 C10,75 20,100 30,115" stroke="${emp?.color||'#3b82f6'}" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M50,5 C70,5 90,25 90,50 C90,75 80,100 70,115" stroke="${emp?.color||'#3b82f6'}" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M25,40 C25,20 75,20 75,40 C75,60 70,85 60,110" stroke="${emp?.color||'#3b82f6'}" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M35,32 C35,18 65,18 65,32 C65,50 62,72 55,100" stroke="${emp?.color||'#3b82f6'}" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+            <path d="M44,26 C44,14 56,14 56,26 C56,40 54,60 50,95" stroke="${emp?.color||'#3b82f6'}" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          </svg>
+        </div>
+        <div class="scan-status" id="scan-st" style="margin-top:12px;">👆 اضغط للمسح</div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        ${!isCheckedIn
+          ? `<button class="btn btn-success" style="flex:1;justify-content:center;" onclick="checkIn()">✅ تسجيل دخول</button>`
+          : `<button class="btn btn-danger" style="flex:1;justify-content:center;" onclick="checkOut()">🚪 تسجيل انصراف</button>`
+        }
+      </div>
+      <div id="late-alert-box" style="margin-top:16px;display:none;"></div>
+      <div id="checkin-log" style="margin-top:16px;"></div>
+    </div>
+  `;
+
+  window._selShift = 1;
+
+  // Live clock in checkin
+  const cwEl = el.querySelector('#cw-time');
+  const cwInterval = setInterval(() => {
+    if(!document.querySelector('#cw-time')) { clearInterval(cwInterval); return; }
+    document.querySelector('#cw-time').textContent = new Date().toLocaleTimeString('ar-IQ',{hour12:false});
+  }, 1000);
+  cwEl.textContent = new Date().toLocaleTimeString('ar-IQ',{hour12:false});
+
+  renderCheckinLog(el);
+
+  // Show late alert if already checked in late today
+  const todayRecs2 = DB.attendance.filter(a => a.empId === currentEmpId && a.date === todayStr());
+  const lateRec = todayRecs2.find(a => (a.lateMin||0) > 0 && a.inTime);
+  if(lateRec){
+    const alertEl = el.querySelector('#late-alert-box');
+    if(alertEl){
+      const dedAmt = calcDeduction(lateRec.lateMin);
+      const shiftStart = (emp.shiftType===2 && lateRec.shiftNum===2) ? emp.s2Start : emp.s1Start;
+      alertEl.style.display = 'block';
+      alertEl.innerHTML = `
+        <div style="background:linear-gradient(135deg,rgba(239,68,68,0.18),rgba(239,68,68,0.06));
+                    border:2px solid rgba(239,68,68,0.6);border-radius:14px;
+                    padding:18px 20px;">
+          <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px;">
+            <span style="font-size:1.8rem;">⚠️</span>
+            <div style="font-weight:900;font-size:1.05rem;color:var(--danger);">
+              أنت متأخر ${lateRec.lateMin} دقيقة!
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;font-size:0.85rem;">
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--text2);">وقت الدوام المحدد</span>
+              <strong style="color:var(--text);">${shiftStart}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--text2);">وقت دخولك الفعلي</span>
+              <strong style="color:var(--warning);">${lateRec.inTime}</strong>
+            </div>
+            <div style="display:flex;justify-content:space-between;">
+              <span style="color:var(--text2);">مقدار التأخير</span>
+              <strong style="color:var(--warning);">${lateRec.lateMin} دقيقة</strong>
+            </div>
+            <div style="border-top:1px solid rgba(239,68,68,0.3);margin-top:4px;padding-top:8px;display:flex;justify-content:space-between;align-items:center;">
+              <span style="color:var(--text2);">خصم التأخير</span>
+              <span style="color:var(--danger);font-weight:900;font-size:1.1rem;">
+                ${dedAmt > 0 ? '- '+fmtCurrency(dedAmt) : DB.settings.deductPerMin > 0 ? '- '+fmtCurrency(dedAmt) : 'لم يُحدد سعر الخصم بعد'}
+              </span>
+            </div>
+            ${DB.settings.deductPerMin > 0 ? `
+            <div style="font-size:0.75rem;color:var(--text3);">
+              ${DB.settings.deductPerMin} د.ع × ${lateRec.lateMin} دقيقة = ${fmtCurrency(dedAmt)}
+            </div>` : `
+            <div style="font-size:0.75rem;color:var(--warning);">
+              ⚠️ لم يتم تحديد سعر خصم الدقيقة — اذهب للمدير لتحديده
+            </div>`}
+          </div>
+        </div>
+      `;
+    }
+  }
+}
+
+function doScan(){
+  const area = document.getElementById('scan-fp');
+  const st = document.getElementById('scan-st');
+  if(!area || area.classList.contains('scanning')) return;
+  area.classList.add('scanning');
+  area.classList.remove('ok','fail');
+  st.className = 'scan-status sc';
+  st.textContent = '⚡ جارٍ المسح...';
+  clearTimeout(scanTimer);
+  scanTimer = setTimeout(() => {
+    area.classList.remove('scanning');
+    area.classList.add('ok');
+    st.className = 'scan-status ok';
+    st.textContent = '✅ تم التعرف عليك!';
+    setTimeout(()=>{ area.classList.remove('ok'); st.className='scan-status'; st.textContent='👆 اضغط للمسح'; }, 3000);
+  }, 1800);
+}
+
+function checkIn(){
+  const emp = getEmp(currentEmpId);
+  const today = todayStr();
+  const now = new Date();
+  const hh=String(now.getHours()).padStart(2,'0');
+  const mm=String(now.getMinutes()).padStart(2,'0');
+  const timeStr=hh+':'+mm;
+  const shiftNum = window._selShift || 1;
+  const lateM = calcLate(emp, timeStr, shiftNum);
+  const dedAmount = calcDeduction(lateM);
+
+  // Check already checked in
+  const existing = DB.attendance.find(a => a.empId === currentEmpId && a.date === today && a.inTime && !a.outTime);
+  if(existing){ showNotif('أنت مسجّل بالفعل، يرجى تسجيل الانصراف أولاً','danger'); return; }
+
+  // Get location then save
+  function saveCheckin(lat, lng, locLabel){
+    const rec = {
+      empId: currentEmpId, empName: emp.name, date: today,
+      inTime: timeStr, outTime: null,
+      shiftNum, status: lateM > 0 ? 'late' : 'present', lateMin: lateM,
+      lat: String(lat||''), lng: String(lng||''), location: String(locLabel||'')
+    };
+    DB.attendance.push(rec);
+    saveDB();
+    emp_page('checkin');
+    if(lateM > 0){
+      const shiftStart2 = (emp.shiftType===2 && shiftNum===2) ? emp.s2Start : emp.s1Start;
+      showLatePopup(lateM, dedAmount, shiftStart2, timeStr);
+    } else {
+      showNotif('✅ تم تسجيل دخولك في الوقت', 'success');
+    }
+    // إرسال للشيت بعد عرض الواجهة
+    setTimeout(() => {
+      api('saveAttendance', rec).catch(() => {
+        setTimeout(() => api('saveAttendance', rec).catch(()=>{}), 5000);
+      });
+    }, 500);
+  }
+
+  if(navigator.geolocation){
+    navigator.geolocation.getCurrentPosition(
+      pos => {
+        const lat = pos.coords.latitude.toFixed(6);
+        const lng = pos.coords.longitude.toFixed(6);
+        const label = lat + ', ' + lng;
+        saveCheckin(lat, lng, label);
+      },
+      err => {
+        // If denied or failed, save without location
+        saveCheckin('', '', 'غير متاح');
+      },
+      {timeout: 8000, maximumAge: 30000}
+    );
+  } else {
+    saveCheckin('', '', 'غير مدعوم');
+  }
+  return; // wait for geolocation callback
+
+}
+
+function showLatePopup(lateM, dedAmount, shiftStart, inTime){
+  // Remove old popup if exists
+  const old = document.getElementById('late-popup-overlay');
+  if(old) old.remove();
+
+  const overlay = document.createElement('div');
+  overlay.id = 'late-popup-overlay';
+  overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;display:flex;align-items:center;justify-content:center;animation:fadeIn 0.2s ease;';
+
+  overlay.innerHTML = `
+    <div style="background:var(--card);border:2px solid var(--danger);border-radius:18px;padding:28px 30px;max-width:360px;width:90%;text-align:center;animation:modalIn 0.25s ease;">
+      <div style="font-size:3rem;margin-bottom:8px;">⚠️</div>
+      <div style="font-size:1.3rem;font-weight:900;color:var(--danger);margin-bottom:4px;">أنت متأخر!</div>
+      <div style="font-size:0.85rem;color:var(--text3);margin-bottom:20px;">تم تسجيل دخولك الساعة <strong style="color:var(--warning)">${inTime}</strong></div>
+
+      <div style="background:rgba(0,0,0,0.3);border-radius:12px;padding:16px;margin-bottom:18px;display:flex;flex-direction:column;gap:10px;text-align:right;">
+        <div style="display:flex;justify-content:space-between;font-size:0.88rem;">
+          <span style="color:var(--text3);">وقت الدوام المحدد</span>
+          <strong style="color:var(--text);">${shiftStart}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.88rem;">
+          <span style="color:var(--text3);">وقت دخولك الفعلي</span>
+          <strong style="color:var(--warning);">${inTime}</strong>
+        </div>
+        <div style="display:flex;justify-content:space-between;font-size:0.88rem;">
+          <span style="color:var(--text3);">مقدار التأخير</span>
+          <strong style="color:var(--warning);">${lateM} دقيقة</strong>
+        </div>
+        <div style="border-top:1px solid rgba(239,68,68,0.3);padding-top:10px;display:flex;justify-content:space-between;align-items:center;">
+          <span style="color:var(--text3);font-size:0.88rem;">خصم التأخير</span>
+          <span style="color:var(--danger);font-weight:900;font-size:1.3rem;">
+            ${dedAmount > 0 ? '- '+fmtCurrency(dedAmount) : 'غير محدد'}
+          </span>
+        </div>
+        ${dedAmount > 0 ? `<div style="font-size:0.75rem;color:var(--text3);text-align:center;">${DB.settings.deductPerMin} د.ع × ${lateM} دقيقة = ${fmtCurrency(dedAmount)}</div>` : `<div style="font-size:0.75rem;color:var(--warning);">⚠️ لم يُحدد سعر خصم الدقيقة من إعدادات المدير</div>`}
+      </div>
+
+      <button onclick="document.getElementById('late-popup-overlay').remove()"
+        style="background:var(--danger);color:white;border:none;border-radius:10px;padding:12px 28px;font-family:'Cairo',sans-serif;font-size:0.95rem;font-weight:800;cursor:pointer;width:100%;">
+        حسناً، فهمت
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+}
+
+function checkOut(){
+  const today = todayStr();
+  const now = new Date();
+  const hh2=String(now.getHours()).padStart(2,'0');
+  const mm2=String(now.getMinutes()).padStart(2,'0');
+  const timeStr=hh2+':'+mm2;
+  const rec = DB.attendance.find(a => a.empId === currentEmpId && a.date === today && a.inTime && !a.outTime);
+  if(!rec){ showNotif('لا يوجد سجل دخول مفتوح اليوم','danger'); return; }
+  rec.outTime = timeStr;
+  saveDB();
+  api('checkOut', {empId: currentEmpId, date: today, outTime: timeStr}).catch(()=>{});
+  showNotif(`تم تسجيل انصرافك الساعة ${timeStr} 🚪`,'info');
+  emp_page('checkin');
+}
+
+function renderCheckinLog(el){
+  const today = todayStr();
+  const recs = DB.attendance.filter(a => a.empId === currentEmpId && a.date === today);
+  const logEl = el.querySelector('#checkin-log');
+  if(!logEl || recs.length === 0) return;
+  logEl.innerHTML = `
+    <div class="card-title" style="margin-bottom:10px;">📍 سجل اليوم</div>
+    ${recs.map(r => `
+      <div style="display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);font-size:0.83rem;">
+        <span>شفت ${r.shiftNum}</span>
+        <span>دخول: <strong>${r.inTime}</strong></span>
+        <span>خروج: <strong>${r.outTime||'-'}</strong></span>
+        <span class="badge ${r.status==='late'?'b-gold':'b-green'}">${r.status==='late'?'متأخر':'حاضر'}</span>
+        ${r.location ? `<a href="https://maps.google.com/?q=${r.lat},${r.lng}" target="_blank" style="font-size:0.72rem;color:var(--accent2);text-decoration:none;">📍 الموقع</a>` : ''}
+      </div>
+    `).join('')}
+  `;
+}
+
+// ---- EMPLOYEE: MY ATTENDANCE ----
+function render_emp_myattendance(el){
+  const myRecs = [...DB.attendance.filter(a => a.empId === currentEmpId)].reverse();
+  const totalDays = [...new Set(myRecs.map(a=>a.date))].length;
+  const lateTimes = myRecs.filter(a => a.lateMin > 0).length;
+  const totalDed = myRecs.reduce((s,a) => s+calcDeduction(a.lateMin||0), 0);
+
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">📋 حضوري وانصرافي</div><div class="ph-sub">سجلات دخولي وخروجي</div></div></div>
+    <div class="stats-row" style="margin-bottom:16px;">
+      <div class="stat-card sc-green"><div class="sc-icon">✅</div><div class="sc-value">${totalDays}</div><div class="sc-label">أيام الحضور</div></div>
+      <div class="stat-card sc-gold"><div class="sc-icon">⏰</div><div class="sc-value">${lateTimes}</div><div class="sc-label">مرات التأخير</div></div>
+      <div class="stat-card sc-red"><div class="sc-icon">💸</div><div class="sc-value" style="font-size:1rem;">${(totalDed/1000).toFixed(0)}k</div><div class="sc-label">إجمالي الخصومات</div></div>
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:14px;">
+      <input type="date" id="my-att-date" style="width:auto;padding:7px 12px;" onchange="filterMyAtt()" />
+      <button class="btn btn-ghost btn-sm" onclick="document.getElementById('my-att-date').value='';filterMyAtt()">مسح</button>
+    </div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead><tr><th>التاريخ</th><th>دخول</th><th>خروج</th><th>الشفت</th><th>تأخير</th><th>خصم</th><th>حالة</th><th>موقع</th></tr></thead>
+          <tbody id="my-att-body"></tbody>
+        </table>
+      </div>
+    </div>
+  `;
+  filterMyAtt();
+}
+
+function filterMyAtt(){
+  const tbody = document.getElementById('my-att-body');
+  if(!tbody) return;
+  const dateF = document.getElementById('my-att-date')?.value || '';
+  let recs = [...DB.attendance.filter(a=>a.empId===currentEmpId)].reverse();
+  if(dateF) recs = recs.filter(a => a.date === dateF);
+  if(recs.length === 0){ tbody.innerHTML='<tr><td colspan="7" style="text-align:center;color:var(--text3);padding:16px;">لا توجد سجلات</td></tr>'; return; }
+  tbody.innerHTML = recs.map(a => {
+    const lateM = a.lateMin || 0;
+    const ded = calcDeduction(lateM);
+    return `<tr>
+      <td>${a.date}</td>
+      <td style="font-variant-numeric:tabular-nums;color:var(--success);">${a.inTime||'-'}</td>
+      <td style="font-variant-numeric:tabular-nums;color:var(--accent2);">${a.outTime||'-'}</td>
+      <td><span class="shift-tag st-${a.shiftNum||1}">شفت ${a.shiftNum||1}</span></td>
+      <td style="color:${lateM>0?'var(--warning)':'var(--text3)'};">${lateM>0?lateM+' د':'-'}</td>
+      <td style="color:${ded>0?'var(--danger)':'var(--text3)'};">${ded>0?fmtCurrency(ded):'-'}</td>
+      <td><span class="badge ${a.status==='late'?'b-gold':'b-green'}">${a.status==='late'?'متأخر':'حاضر'}</span></td>
+      <td>${a.lat && a.lng ? `<a href="https://maps.google.com/?q=${a.lat},${a.lng}" target="_blank" style="color:var(--accent2);font-size:0.8rem;text-decoration:none;">📍</a>` : '-'}</td>
+    </tr>`;
+  }).join('');
+}
+
+// ---- EMPLOYEE: REQUESTS ----
+function render_emp_requests(el){
+  const myReqs = [...DB.requests.filter(r=>r.empId===currentEmpId)].reverse();
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">📩 طلباتي</div><div class="ph-sub">${myReqs.length} طلب</div></div>
+    <button class="btn btn-primary btn-sm" onclick="emp_page('newrequest')">➕ طلب جديد</button></div>
+    <div id="my-reqs-list"></div>
+  `;
+  const cont = el.querySelector('#my-reqs-list');
+  if(myReqs.length === 0){ cont.innerHTML='<div class="alert a-info">لا توجد طلبات سابقة</div>'; return; }
+  cont.innerHTML = myReqs.map(r => {
+    const typeIcon = r.type==='loan'?'💰':r.type==='leave_full'?'📅':'⏱️';
+    const typeLabel = r.type==='loan'?'سلفة':r.type==='leave_full'?'إجازة يوم كامل':'إجازة زمنية';
+    const statusBadge = r.status==='pending'?'<span class="badge b-gold">⏳ قيد الانتظار</span>'
+      :r.status==='approved'?'<span class="badge b-green">✅ موافق</span>'
+      :r.status==='settled'?'<span class="badge b-blue">✔️ مُسوَّى (تصفير)</span>'
+      :'<span class="badge b-red">❌ مرفوض</span>';
+    const details = r.type==='loan'
+      ? `المبلغ: <strong>${fmtCurrency(r.amount)}</strong> · ${r.months} أقساط`
+      : r.type==='leave_full'
+      ? `من: ${r.from} إلى: ${r.to}`
+      : `${r.date} · من ${r.fromTime} إلى ${r.toTime}`;
+    return `<div class="req-card">
+      <div class="req-icon">${typeIcon}</div>
+      <div class="req-info">
+        <div class="req-title">${typeLabel}</div>
+        <div class="req-sub">${details}</div>
+        ${r.reason ? `<div class="req-sub">السبب: ${r.reason}</div>` : ''}
+        <div style="margin-top:6px;">${statusBadge}</div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ---- EMPLOYEE: NEW REQUEST ----
+function render_emp_newrequest(el){
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">➕ طلب جديد</div><div class="ph-sub">اختر نوع الطلب</div></div></div>
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:14px;">
+      <div onclick="openModal('modal-loan')" style="cursor:pointer;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:all 0.2s;"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:2rem;margin-bottom:8px;">💰</div>
+        <div style="font-weight:800;font-size:0.95rem;">طلب سلفة</div>
+        <div style="font-size:0.77rem;color:var(--text3);margin-top:4px;">طلب سلفة من الراتب</div>
+      </div>
+      <div onclick="openModal('modal-leave-full')" style="cursor:pointer;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:all 0.2s;"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:2rem;margin-bottom:8px;">📅</div>
+        <div style="font-weight:800;font-size:0.95rem;">إجازة يوم كامل</div>
+        <div style="font-size:0.77rem;color:var(--text3);margin-top:4px;">طلب إجازة لمدة يوم أو أكثر</div>
+      </div>
+      <div onclick="openModal('modal-leave-time')" style="cursor:pointer;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:24px;text-align:center;transition:all 0.2s;"
+        onmouseover="this.style.borderColor='var(--accent)'" onmouseout="this.style.borderColor='var(--border)'">
+        <div style="font-size:2rem;margin-bottom:8px;">⏱️</div>
+        <div style="font-weight:800;font-size:0.95rem;">إجازة زمنية</div>
+        <div style="font-size:0.77rem;color:var(--text3);margin-top:4px;">طلب إجازة لساعات محددة</div>
+      </div>
+    </div>
+  `;
+}
+
+// =============================================
+// ADD EMPLOYEE LOGIC
+// =============================================
+function setShiftType(type){
+  newEmpShiftType = type;
+  document.getElementById('shift-tab-1').className = 'tab' + (type===1?' active':'');
+  document.getElementById('shift-tab-2').className = 'tab' + (type===2?' active':'');
+  document.getElementById('shift2-section').style.display = type===2 ? 'block' : 'none';
+}
+
+function pickColor(el){
+  document.querySelectorAll('.color-dot').forEach(d=>d.classList.remove('selected'));
+  el.classList.add('selected');
+  newEmpColor = el.dataset.color;
+}
+
+function addEmployee(){
+  const name = document.getElementById('ne-name').value.trim();
+  const id = document.getElementById('ne-id').value.trim();
+  const dept = document.getElementById('ne-dept').value;
+  const salary = parseFloat(document.getElementById('ne-salary').value)||0;
+  const phone = document.getElementById('ne-phone').value.trim();
+  const pin = document.getElementById('ne-pin').value.trim();
+  const s1Start = document.getElementById('ne-s1-start').value;
+  const s1End = document.getElementById('ne-s1-end').value;
+  const s2Start = newEmpShiftType===2 ? document.getElementById('ne-s2-start').value : null;
+  const s2End = newEmpShiftType===2 ? document.getElementById('ne-s2-end').value : null;
+
+  if(!name||!id){ showNotif('⚠️ الاسم ورقم الموظف مطلوبان','danger'); return; }
+  if(!pin){ showNotif('⚠️ الرمز السري مطلوب','danger'); return; }
+  if(DB.employees.find(e=>e.id===id)){ showNotif('⚠️ رقم الموظف مستخدم مسبقاً','danger'); return; }
+
+  const newEmp = { id, name, dept, salary, phone, pin, color:newEmpColor, shiftType:newEmpShiftType, s1Start, s1End, s2Start, s2End };
+  DB.employees.push(newEmp);
+  saveDB();
+  api('saveEmployee', newEmp).catch(()=>{});
+  closeModal('modal-add-emp');
+  showNotif(`تم إضافة ${name} بنجاح ✅`,'success');
+  // Reset
+  document.getElementById('ne-name').value='';
+  document.getElementById('ne-id').value='EMP'+String(DB.employees.length).padStart(3,'0');
+  document.getElementById('ne-salary').value='';
+  document.getElementById('ne-phone').value='';
+  document.getElementById('ne-pin').value='';
+  newEmpColor = '#3b82f6';
+  newEmpShiftType = 1;
+  setShiftType(1);
+  document.querySelectorAll('#color-picker .color-dot').forEach(d=>d.classList.remove('selected'));
+  document.querySelector('#color-picker .color-dot[data-color="#3b82f6"]')?.classList.add('selected');
+  // Update counts
+  const badge = document.getElementById('emp-nav-count');
+  if(badge) badge.textContent = DB.employees.length;
+  if(currentPage==='employees') mgr_page('employees');
+  else if(currentPage==='dashboard') mgr_page('dashboard');
+}
+
+// =============================================
+// BONUS MODAL
+// =============================================
+function openBonusModal(){
+  document.getElementById('bon-emp').innerHTML = empSelOptions();
+  document.getElementById('bon-date').value = todayStr();
+  document.getElementById('bon-amount').value = '';
+  document.getElementById('bon-reason').value = '';
+  openModal('modal-bonus');
+}
+
+function addBonus(){
+  const empId = document.getElementById('bon-emp').value;
+  const amount = parseFloat(document.getElementById('bon-amount').value);
+  const reason = document.getElementById('bon-reason').value.trim();
+  const date = document.getElementById('bon-date').value;
+  if(!empId||!amount||amount<=0){ showNotif('⚠️ يرجى اختيار الموظف وتحديد المبلغ','danger'); return; }
+  const bon = {empId, empName: getEmp(empId)?.name||empId, amount, reason, date};
+  DB.bonuses.push(bon);
+  saveDB();
+  api('saveBonus', bon).catch(()=>{});
+  closeModal('modal-bonus');
+  showNotif(`تم إضافة المكافأة بنجاح 🏆`,'gold');
+  if(currentPage==='bonuses') mgr_page('bonuses');
+  else if(currentPage==='dashboard') mgr_page('dashboard');
+}
+
+// =============================================
+// ABSENCE MODAL
+// =============================================
+function openAbsenceModal(){
+  document.getElementById('abs-emp').innerHTML = empSelOptions();
+  document.getElementById('abs-date').value = todayStr();
+  document.getElementById('abs-reason').value = '';
+  openModal('modal-absence');
+}
+
+function addAbsence(){
+  const empId = document.getElementById('abs-emp').value;
+  const date = document.getElementById('abs-date').value;
+  const reason = document.getElementById('abs-reason').value.trim();
+  if(!empId||!date){ showNotif('⚠️ يرجى اختيار الموظف والتاريخ','danger'); return; }
+  const absRec = {empId, empName: getEmp(empId)?.name||empId, date, reason};
+  DB.absences.push(absRec);
+  saveDB();
+  api('saveAbsence', absRec).catch(()=>{});
+  closeModal('modal-absence');
+  showNotif('تم تسجيل الغياب ✅');
+  if(currentPage==='absences') mgr_page('absences');
+}
+
+// =============================================
+// REQUEST MODALS
+// =============================================
+function submitLoan(){
+  const amount = parseFloat(document.getElementById('loan-amount').value);
+  const months = document.getElementById('loan-months').value;
+  const reason = document.getElementById('loan-reason').value.trim();
+  if(!amount||amount<=0){ showNotif('⚠️ يرجى تحديد المبلغ','danger'); return; }
+  const loanReq = {
+    id: 'REQ'+Date.now(), empId: currentEmpId,
+    empName: getEmp(currentEmpId)?.name||currentEmpId,
+    type:'loan', amount, months, reason,
+    date: todayStr(), status:'pending'
+  };
+  DB.requests.push(loanReq);
+  saveDB();
+  api('saveRequest', loanReq).catch(()=>{});
+  closeModal('modal-loan');
+  showNotif('تم إرسال طلب السلفة ✅');
+  document.getElementById('loan-amount').value='';
+  document.getElementById('loan-reason').value='';
+  if(currentPage==='requests') emp_page('requests');
+}
+
+function submitLeave(type){
+  let req = { id:'REQ'+Date.now(), empId:currentEmpId, type:'leave_'+type, status:'pending' };
+  if(type==='full'){
+    const from = document.getElementById('lf-from').value;
+    const to = document.getElementById('lf-to').value;
+    const reason = document.getElementById('lf-reason').value.trim();
+    const ltype = document.getElementById('lf-type').value;
+    if(!from||!to){ showNotif('⚠️ يرجى تحديد التواريخ','danger'); return; }
+    req = {...req, from, to, leaveType:ltype, reason};
+    closeModal('modal-leave-full');
+  } else {
+    const date = document.getElementById('lt-date').value;
+    const fromTime = document.getElementById('lt-from').value;
+    const toTime = document.getElementById('lt-to').value;
+    const reason = document.getElementById('lt-reason').value.trim();
+    if(!date||!fromTime||!toTime){ showNotif('⚠️ يرجى تعبئة جميع الحقول','danger'); return; }
+    req = {...req, date, fromTime, toTime, reason};
+    closeModal('modal-leave-time');
+  }
+  req.empName = getEmp(currentEmpId)?.name || currentEmpId;
+  DB.requests.push(req);
+  saveDB();
+  api('saveRequest', req).catch(()=>{});
+  showNotif('تم إرسال طلب الإجازة ✅');
+  if(currentPage==='requests') emp_page('requests');
+}
+
+
+// =============================================
+// MANUAL DEDUCTION
+// =============================================
+function openManualDedModal(){
+  document.getElementById('mded-emp').innerHTML = empSelOptions();
+  document.getElementById('mded-date').value = todayStr();
+  document.getElementById('mded-amount').value = '';
+  document.getElementById('mded-reason').value = '';
+  openModal('modal-manual-ded');
+}
+
+function addManualDeduction(){
+  const empId = document.getElementById('mded-emp').value;
+  const amount = parseFloat(document.getElementById('mded-amount').value);
+  const reason = document.getElementById('mded-reason').value.trim();
+  const date = document.getElementById('mded-date').value;
+  if(!empId || !amount || amount<=0){ showNotif('⚠️ يرجى تعبئة جميع الحقول','danger'); return; }
+  if(!reason){ showNotif('⚠️ سبب الخصم مطلوب','danger'); return; }
+  if(!DB.manualDeductions) DB.manualDeductions = [];
+  const dedRec = { empId, empName: getEmp(empId)?.name||empId, amount, reason, date, type:'manual' };
+  DB.manualDeductions.push(dedRec);
+  saveDB();
+  api('saveDeduction', dedRec).catch(()=>{});
+  closeModal('modal-manual-ded');
+  const emp = getEmp(empId);
+  showNotif(`تم خصم ${fmtCurrency(amount)} من ${emp?.name||empId} 💸`,'danger');
+  if(currentPage==='deductions') mgr_page('deductions');
+  if(currentPage==='payroll') mgr_page('payroll');
+}
+
+function deleteManualDed(idx){
+  if(!confirm('هل تريد حذف هذا الخصم؟')) return;
+  DB.manualDeductions.splice(idx,1);
+  saveDB();
+  mgr_page('deductions');
+  showNotif('تم حذف الخصم','info');
+}
+
+// =============================================
+// EDIT EMPLOYEE
+// =============================================
+let editEmpColor = '#3b82f6';
+let editEmpShiftType = 1;
+
+function openEditEmp(id){
+  const emp = getEmp(id);
+  if(!emp) return;
+  document.getElementById('edit-emp-id').value = id;
+  document.getElementById('edit-emp-name').value = emp.name;
+  document.getElementById('edit-emp-dept').value = emp.dept;
+  document.getElementById('edit-emp-phone').value = emp.phone || '';
+  document.getElementById('edit-emp-salary').value = emp.salary || '';
+  document.getElementById('edit-s1-start').value = emp.s1Start || '08:00';
+  document.getElementById('edit-s1-end').value = emp.s1End || '16:00';
+  document.getElementById('edit-s2-start').value = emp.s2Start || '16:00';
+  document.getElementById('edit-s2-end').value = emp.s2End || '00:00';
+  document.getElementById('edit-emp-pin').value = '';
+  const pinInfo = document.getElementById('edit-pin-current');
+  if(pinInfo){
+    pinInfo.textContent = emp.pin
+      ? '✅ الرمز السري محدد — اتركه فارغاً للإبقاء، أو اكتب رمزاً جديداً لتغييره'
+      : '⚠️ لا يوجد رمز سري — يرجى تحديد رمز للموظف';
+    pinInfo.style.color = emp.pin ? 'var(--success)' : 'var(--warning)';
+  }
+  editEmpColor = emp.color || '#3b82f6';
+  editEmpShiftType = emp.shiftType || 1;
+  document.querySelectorAll('#edit-color-picker .color-dot').forEach(d=>{
+    d.classList.toggle('selected', d.dataset.color === editEmpColor);
+  });
+  setEditShiftType(editEmpShiftType);
+  openModal('modal-edit-emp');
+}
+
+function setEditShiftType(type){
+  editEmpShiftType = type;
+  document.getElementById('edit-shift-tab-1').className = 'tab' + (type===1?' active':'');
+  document.getElementById('edit-shift-tab-2').className = 'tab' + (type===2?' active':'');
+  document.getElementById('edit-shift2-section').style.display = type===2?'block':'none';
+}
+
+function pickEditColor(el){
+  document.querySelectorAll('#edit-color-picker .color-dot').forEach(d=>d.classList.remove('selected'));
+  el.classList.add('selected');
+  editEmpColor = el.dataset.color;
+}
+
+function saveEditEmployee(){
+  const id = document.getElementById('edit-emp-id').value;
+  const emp = getEmp(id);
+  if(!emp) return;
+  const name = document.getElementById('edit-emp-name').value.trim();
+  const newPin = document.getElementById('edit-emp-pin')?.value?.trim() || '';
+  if(!name){ showNotif('⚠️ الاسم مطلوب','danger'); return; }
+  emp.name = name;
+  emp.dept = document.getElementById('edit-emp-dept').value;
+  emp.phone = document.getElementById('edit-emp-phone').value.trim();
+  emp.salary = parseFloat(document.getElementById('edit-emp-salary').value)||0;
+  emp.color = editEmpColor;
+  emp.shiftType = editEmpShiftType;
+  emp.s1Start = document.getElementById('edit-s1-start').value;
+  emp.s1End = document.getElementById('edit-s1-end').value;
+  emp.s2Start = editEmpShiftType===2 ? document.getElementById('edit-s2-start').value : null;
+  emp.s2End = editEmpShiftType===2 ? document.getElementById('edit-s2-end').value : null;
+  if(newPin) emp.pin = newPin;
+  saveDB();
+  api('updateEmployee', emp).catch(()=>{});
+  closeModal('modal-edit-emp');
+  const pinMsg = newPin ? ' وتم تغيير الرمز السري' : '';
+  showNotif(`تم تعديل بيانات ${name}${pinMsg} ✅`,'success');
+  if(currentPage==='employees') mgr_page('employees');
+}
+
+// =============================================
+// WEEKLY RESET
+// =============================================
+function openWeeklyReset(){
+  // Build preview
+  const preview = document.getElementById('weekly-reset-preview');
+  const lateDedTotal = DB.attendance.reduce((s,a)=>s+calcDeduction(a.lateMin||0),0);
+  const manDedTotal = (DB.manualDeductions||[]).reduce((s,d)=>s+Number(d.amount||0),0);
+  const totalDed = lateDedTotal + manDedTotal;
+  const totalBonus = DB.bonuses.reduce((s,b)=>s+Number(b.amount||0),0);
+  const today = todayStr();
+  // Get week dates
+  const now = new Date();
+  const weekStart = new Date(now); weekStart.setDate(now.getDate() - now.getDay());
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekStart.getDate() + 6);
+  const wStr = `${weekStart.toLocaleDateString('ar-IQ')} - ${weekEnd.toLocaleDateString('ar-IQ')}`;
+
+  preview.innerHTML = `
+    <div style="font-weight:800;margin-bottom:10px;color:var(--text2);">📋 ملخص ما سيتم تصفيره:</div>
+    ${[
+      ['📅 الفترة', wStr],
+      ['👥 عدد الموظفين', DB.employees.length],
+      ['📋 سجلات الحضور', DB.attendance.length + ' سجل'],
+      ['⏰ خصومات التأخير', fmtCurrency(lateDedTotal)],
+        ['💸 الخصومات اليدوية', fmtCurrency(manDedTotal)],
+      ['🏆 إجمالي المكافآت', fmtCurrency(totalBonus)],
+      ['❌ سجلات الغياب', DB.absences.length + ' سجل'],
+    ].map(([l,v])=>`
+      <div style="display:flex;justify-content:space-between;padding:5px 0;border-bottom:1px solid var(--border);font-size:0.82rem;">
+        <span style="color:var(--text2);">${l}</span><span style="font-weight:700;">${v}</span>
+      </div>`).join('')}
+  `;
+
+  document.getElementById('reset-note').value = `تصفير أسبوع ${wStr}`;
+  openModal('modal-weekly-reset');
+}
+
+function confirmWeeklyReset(){
+  const note = document.getElementById('reset-note').value.trim();
+  const now = new Date();
+  if(!DB.manualDeductions) DB.manualDeductions = [];
+
+  // Build full payroll snapshot before reset
+  const snapshot = DB.employees.map(emp => {
+    const recs = DB.attendance.filter(a => a.empId === emp.id);
+    const totalLateMin = recs.reduce((s,a)=>s+(a.lateMin||0),0);
+    const lateDed = calcDeduction(totalLateMin);
+    const manDed = DB.manualDeductions.filter(d=>d.empId===emp.id).reduce((s,d)=>s+Number(d.amount||0),0);
+    const totalDed = lateDed + manDed;
+    const totalBonus = DB.bonuses.filter(b=>b.empId===emp.id).reduce((s,b)=>s+Number(b.amount||0),0);
+    const netSalary = (emp.salary||0) - totalDed + totalBonus;
+    const lateDetails = recs.filter(r=>r.lateMin>0).map(r=>({type:'late',date:r.date,lateMin:r.lateMin,amount:calcDeduction(r.lateMin)}));
+    const manualDetails = DB.manualDeductions.filter(d=>d.empId===emp.id).map(d=>({type:d.type||'manual',date:d.date,amount:d.amount,reason:d.reason}));
+    const bonusDetails = DB.bonuses.filter(b=>b.empId===emp.id).map(b=>({date:b.date,amount:b.amount,reason:b.reason}));
+    return { id:emp.id, name:emp.name, salary:emp.salary||0, totalLateMin, lateDed, manDed, totalDed, totalBonus, netSalary, lateDetails, manualDetails, bonusDetails };
+  });
+
+  // Save to archive
+  if(!DB.archive) DB.archive = [];
+  DB.archive.unshift({
+    id: 'ARC'+Date.now(),
+    date: now.toISOString().split('T')[0],
+    note: note || 'تصفير أسبوعي',
+    snapshot,
+    totalAttendance: DB.attendance.length,
+    totalAbsences: DB.absences.length,
+  });
+
+  // Reset everything financial — keep employees & requests history only
+  DB.attendance = [];
+  DB.bonuses = [];
+  DB.absences = [];
+  DB.manualDeductions = [];
+  // Reset approved loan requests
+  DB.requests = DB.requests.map(r => {
+    if(r.type === 'loan' && r.status === 'approved') return {...r, status:'settled'};
+    return r;
+  });
+
+  saveDB();
+  // Send to Sheets
+  api('weeklyReset', {note, snapshot}).then(()=>{
+    showNotif('تم التصفير الأسبوعي وحفظ الأرشيف ✅','gold');
+  }).catch(()=>{
+    showNotif('تم التصفير محلياً (تعذر الحفظ بالشيت)','gold');
+  });
+  closeModal('modal-weekly-reset');
+  mgr_page('payroll');
+}
+
+// =============================================
+// PAYROLL PAGE
+// =============================================
+function render_mgr_payroll(el){
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">💵 كشف الرواتب</div><div class="ph-sub">الراتب الصافي لكل موظف بعد الخصومات والمكافآت</div></div>
+      <button class="btn btn-gold" onclick="openWeeklyReset()">🔄 تصفير أسبوعي</button>
+    </div>
+    <div class="alert a-green" style="margin-bottom:16px;">✅ الرواتب المحسوبة على أساس: الراتب الأساسي - خصومات التأخير + المكافآت</div>
+    <div class="card">
+      <div class="tbl-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>الموظف</th>
+              <th>الراتب الأساسي</th>
+              <th>إجمالي الخصومات</th>
+              <th>إجمالي المكافآت</th>
+              <th>صافي الراتب</th>
+              <th>الحالة</th>
+            </tr>
+          </thead>
+          <tbody id="payroll-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="card" style="margin-top:16px;">
+      <div class="card-header"><span class="card-title">📊 ملخص كشف الرواتب</span></div>
+      <div class="card-body" id="payroll-summary"></div>
+    </div>
+  `;
+  renderPayrollTable(el);
+}
+
+function renderPayrollTable(el){
+  const tbody = el.querySelector('#payroll-tbody');
+  const summary = el.querySelector('#payroll-summary');
+  let grandBase=0, grandDed=0, grandBonus=0, grandNet=0;
+
+  tbody.innerHTML = DB.employees.map(emp => {
+    const recs = DB.attendance.filter(a => a.empId === emp.id);
+    const totalLateMin = recs.reduce((s,a)=>s+(a.lateMin||0),0);
+    const lateDed = calcDeduction(totalLateMin);
+    const manDed = (DB.manualDeductions||[]).filter(d=>d.empId===emp.id).reduce((s,d)=>s+Number(d.amount||0),0);
+    const totalDed = lateDed + manDed;
+    const totalBonus = DB.bonuses.filter(b=>b.empId===emp.id).reduce((s,b)=>s+Number(b.amount||0),0);
+    const baseSalary = emp.salary || 0;
+    const netSalary = baseSalary - totalDed + totalBonus;
+    grandBase += baseSalary; grandDed += totalDed; grandBonus += totalBonus; grandNet += netSalary;
+    const diff = netSalary - baseSalary;
+    const diffColor = diff > 0 ? 'var(--success)' : diff < 0 ? 'var(--danger)' : 'var(--text3)';
+    const diffLabel = diff > 0 ? `▲ ${fmtCurrency(diff)}` : diff < 0 ? `▼ ${fmtCurrency(Math.abs(diff))}` : 'لا تغيير';
+    return `<tr>
+      <td><div class="emp-cell"><div class="av" style="background:${emp.color}">${emp.name.charAt(0)}</div>
+        <div class="emp-cell-info"><div class="name">${emp.name}</div><div class="sub">${emp.dept}</div></div></div></td>
+      <td style="font-weight:700;">${fmtCurrency(baseSalary)}</td>
+      <td style="color:var(--danger);font-weight:700;">${totalDed>0?'- '+fmtCurrency(totalDed):'-'}</td>
+      <td style="color:var(--gold-light);font-weight:700;">${totalBonus>0?'+ '+fmtCurrency(totalBonus):'-'}</td>
+      <td style="font-size:1rem;font-weight:900;color:var(--success);">${fmtCurrency(netSalary)}</td>
+      <td style="color:${diffColor};font-weight:700;font-size:0.78rem;">${diffLabel}</td>
+    </tr>`;
+  }).join('');
+
+  summary.innerHTML = `
+    <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;">
+      ${[
+        ['💵 إجمالي الرواتب الأساسية', fmtCurrency(grandBase), 'var(--accent2)'],
+        ['💸 إجمالي الخصومات', fmtCurrency(grandDed), 'var(--danger)'],
+        ['🏆 إجمالي المكافآت', fmtCurrency(grandBonus), 'var(--gold-light)'],
+        ['✅ إجمالي الرواتب الصافية', fmtCurrency(grandNet), 'var(--success)'],
+      ].map(([l,v,c])=>`
+        <div style="background:rgba(0,0,0,0.2);border-radius:10px;padding:14px;">
+          <div style="font-size:0.72rem;color:var(--text3);margin-bottom:6px;">${l}</div>
+          <div style="font-size:1.1rem;font-weight:900;color:${c};">${v}</div>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+// =============================================
+// ARCHIVE PAGE
+// =============================================
+function render_mgr_archive(el){
+  const archives = DB.archive || [];
+  el.innerHTML = `
+    <div class="ph">
+      <div><div class="ph-title">🗂️ الأرشيف</div><div class="ph-sub">سجل التصفيرات الأسبوعية السابقة</div></div>
+    </div>
+    ${archives.length === 0
+      ? `<div class="alert a-info">لا يوجد أرشيف بعد. سيظهر هنا عند إجراء التصفير الأسبوعي.</div>`
+      : archives.map((arc,i) => `
+        <div class="card" style="margin-bottom:14px;">
+          <div class="card-header">
+            <span class="card-title">📅 ${arc.note} - ${arc.date}</span>
+            <button class="btn btn-ghost btn-sm" onclick="toggleArchive('arc-body-${i}')">عرض التفاصيل</button>
+          </div>
+          <div id="arc-body-${i}" style="display:none;">
+            <div class="tbl-wrap">
+              <table>
+                <thead><tr><th>الموظف</th><th>الراتب الأساسي</th><th>الخصومات</th><th>المكافآت</th><th>صافي الراتب</th></tr></thead>
+                <tbody>
+                  ${arc.snapshot.map(s=>`
+                    <tr>
+                      <td style="font-weight:600;">${s.name}</td>
+                      <td>${fmtCurrency(s.salary)}</td>
+                      <td style="color:var(--danger);">${s.totalDed>0?'- '+fmtCurrency(s.totalDed):'-'}</td>
+                      <td style="color:var(--gold-light);">${s.totalBonus>0?'+ '+fmtCurrency(s.totalBonus):'-'}</td>
+                      <td style="font-weight:800;color:var(--success);">${fmtCurrency(s.netSalary)}</td>
+                    </tr>`).join('')}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>`).join('')}
+  `;
+}
+
+function toggleArchive(id){
+  const el = document.getElementById(id);
+  if(el) el.style.display = el.style.display==='none' ? 'block' : 'none';
+}
+
+// Employee finance page - update to show net salary
+function render_emp_myfinance(el){
+  const emp = getEmp(currentEmpId);
+  if(!emp) return;
+
+  // Bonuses
+  const myBonuses = DB.bonuses.filter(b => b.empId === currentEmpId);
+  const totalBonus = myBonuses.reduce((s,b)=>s+Number(b.amount||0),0);
+
+  // Late deductions (per attendance record)
+  const myRecs = DB.attendance.filter(a => a.empId === currentEmpId && (a.lateMin||0)>0);
+  const lateDed = myRecs.reduce((s,a)=>s+calcDeduction(a.lateMin||0),0);
+
+  // Manual deductions from manager (includes approved loans + rejected leave + manual)
+  const allManualDeds = (DB.manualDeductions||[]).filter(d => d.empId === currentEmpId);
+  // Separate by type for display
+  const loanDeds   = allManualDeds.filter(d => d.type === 'loan');
+  const leaveDeds  = allManualDeds.filter(d => d.type === 'leave_rejected');
+  const otherDeds  = allManualDeds.filter(d => d.type !== 'loan' && d.type !== 'leave_rejected');
+  const manualDed  = allManualDeds.reduce((s,d)=>s+Number(d.amount||0),0);
+
+  const totalDed = lateDed + manualDed;
+  const baseSalary = emp.salary || 0;
+  const netSalary = baseSalary - totalDed + totalBonus;
+  const netColor = netSalary >= baseSalary ? 'var(--success)' : netSalary >= baseSalary*0.8 ? 'var(--warning)' : 'var(--danger)';
+
+  // Pending requests
+  const pendingReqs = DB.requests.filter(r => r.empId === currentEmpId && r.status === 'pending');
+
+  // Daily salary for info
+  const dailySalary = Math.round(baseSalary / 7.5);
+
+  // Debug: log current settings
+  console.log('deductPerMin:', DB.settings.deductPerMin, 'lateRecs:', myRecs.length, 'lateDed:', lateDed);
+
+  el.innerHTML = `
+    <div class="ph"><div><div class="ph-title">💰 ملفي المالي</div><div class="ph-sub">تفاصيل راتبك هذه الفترة</div></div></div>
+    ${DB.settings.deductPerMin === 0 ? '<div class="alert a-warn" style="margin-bottom:12px;">⚠️ سعر خصم الدقيقة = 0 — اضبطه من إعدادات المدير حتى يظهر الخصم</div>' : ''}
+
+    <!-- Net salary hero card -->
+    <div style="background:linear-gradient(135deg,rgba(16,185,129,0.1),rgba(59,130,246,0.08));border:1px solid rgba(16,185,129,0.25);border-radius:var(--radius);padding:22px;margin-bottom:18px;">
+      <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+        <div>
+          <div style="font-size:0.75rem;color:var(--text3);font-weight:700;letter-spacing:0.5px;margin-bottom:6px;">💵 صافي راتبك هذه الفترة</div>
+          <div style="font-size:2.4rem;font-weight:900;color:${netColor};line-height:1;">${fmtCurrency(netSalary)}</div>
+          <div style="font-size:0.75rem;color:var(--text3);margin-top:6px;">بعد الخصومات والمكافآت</div>
+        </div>
+        <div style="background:rgba(0,0,0,0.2);border-radius:12px;padding:14px 18px;min-width:200px;">
+          <div class="ded-row" style="padding:5px 0;"><span style="color:var(--text2);">الراتب الأساسي</span><span style="font-weight:800;color:var(--text);">${fmtCurrency(baseSalary)}</span></div>
+          <div class="ded-row" style="padding:5px 0;"><span style="color:var(--danger);">⏰ خصم التأخير</span><span style="font-weight:700;color:var(--danger);">- ${fmtCurrency(lateDed)}</span></div>
+          <div class="ded-row" style="padding:5px 0;"><span style="color:var(--danger);">💸 خصومات وديون</span><span style="font-weight:700;color:var(--danger);">- ${fmtCurrency(manualDed)}</span></div>
+          <div class="ded-row" style="padding:5px 0;border-bottom:none;"><span style="color:var(--gold-light);">🏆 المكافآت</span><span style="font-weight:700;color:var(--gold-light);">+ ${fmtCurrency(totalBonus)}</span></div>
+          <div style="border-top:1px solid var(--border2);margin-top:6px;padding-top:6px;display:flex;justify-content:space-between;font-size:0.88rem;">
+            <span style="font-weight:800;color:var(--text);">الصافي</span>
+            <span style="font-weight:900;color:${netColor};">${fmtCurrency(netSalary)}</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Deductions detail -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <span class="card-title">💸 تفاصيل الخصومات</span>
+        <span style="font-size:0.8rem;color:var(--danger);font-weight:700;">الإجمالي: - ${fmtCurrency(totalDed)}</span>
+      </div>
+      <div id="ded-detail-body" style="padding:0 4px;">
+        ${(myRecs.length === 0 && allManualDeds.length === 0) ? `
+          <div style="padding:16px;text-align:center;color:var(--text3);font-size:0.85rem;">✅ لا توجد خصومات هذه الفترة</div>
+        ` : `
+          ${myRecs.length > 0 ? `
+          <div style="padding:10px 14px;font-size:0.72rem;color:var(--text3);font-weight:800;letter-spacing:0.5px;background:rgba(0,0,0,0.15);">⏰ خصومات التأخير</div>
+          ${myRecs.map(r=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03);gap:8px;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:1rem;">⏰</span>
+                <div>
+                  <div style="font-size:0.82rem;font-weight:700;">تأخير ${r.lateMin} دقيقة</div>
+                  <div style="font-size:0.72rem;color:var(--text3);">${r.date} · شفت ${r.shiftNum||1}</div>
+                </div>
+              </div>
+              <span style="color:var(--danger);font-weight:800;font-size:0.88rem;">- ${fmtCurrency(calcDeduction(r.lateMin))}</span>
+            </div>
+          `).join('')}` : ''}
+          ${allManualDeds.length > 0 ? `
+          <div style="padding:10px 14px;font-size:0.72rem;color:var(--text3);font-weight:800;letter-spacing:0.5px;background:rgba(0,0,0,0.15);margin-top:4px;">💸 خصومات من المدير</div>
+          ${allManualDeds.map(d=>`
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;border-bottom:1px solid rgba(255,255,255,0.03);gap:8px;flex-wrap:wrap;">
+              <div style="display:flex;align-items:center;gap:8px;">
+                <span style="font-size:1rem;">💸</span>
+                <div>
+                  <div style="font-size:0.82rem;font-weight:700;">${d.reason}</div>
+                  <div style="font-size:0.72rem;color:var(--text3);">${d.date} · قرار إداري</div>
+                </div>
+              </div>
+              <span style="color:var(--danger);font-weight:800;font-size:0.88rem;">- ${fmtCurrency(d.amount)}</span>
+            </div>
+          `).join('')}` : ''}
+        `}
+      </div>
+    </div>
+
+    <!-- Bonuses detail -->
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header">
+        <span class="card-title">🏆 تفاصيل المكافآت</span>
+        <span style="font-size:0.8rem;color:var(--gold-light);font-weight:700;">الإجمالي: + ${fmtCurrency(totalBonus)}</span>
+      </div>
+      ${myBonuses.length === 0
+        ? '<div style="padding:16px;text-align:center;color:var(--text3);font-size:0.85rem;">لا توجد مكافآت هذه الفترة</div>'
+        : myBonuses.map(b=>`
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:12px 16px;border-bottom:1px solid rgba(255,255,255,0.03);gap:8px;flex-wrap:wrap;">
+            <div style="display:flex;align-items:center;gap:8px;">
+              <span style="font-size:1rem;">🏆</span>
+              <div>
+                <div style="font-size:0.82rem;font-weight:700;">${b.reason||'مكافأة'}</div>
+                <div style="font-size:0.72rem;color:var(--text3);">${b.date}</div>
+              </div>
+            </div>
+            <span style="color:var(--gold-light);font-weight:800;font-size:0.88rem;">+ ${fmtCurrency(b.amount)}</span>
+          </div>
+        `).join('')}
+    </div>
+
+    <!-- Deductions breakdown: loans + leave penalties -->
+    ${(loanDeds.length > 0 || leaveDeds.length > 0) ? `
+    <div class="card" style="margin-bottom:16px;">
+      <div class="card-header"><span class="card-title">💳 الديون والغيابات</span></div>
+      ${loanDeds.map(d=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.03);gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>💳</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;">${d.reason}</div>
+              <div style="font-size:0.72rem;color:var(--text3);">تاريخ الاعتماد: ${d.date}</div>
+            </div>
+          </div>
+          <span style="color:var(--danger);font-weight:800;">- ${fmtCurrency(d.amount)}</span>
+        </div>`).join('')}
+      ${leaveDeds.map(d=>`
+        <div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.03);gap:8px;flex-wrap:wrap;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <span>🚫</span>
+            <div>
+              <div style="font-size:0.82rem;font-weight:700;">${d.reason}</div>
+              <div style="font-size:0.72rem;color:var(--text3);">${d.date}</div>
+            </div>
+          </div>
+          <span style="color:var(--danger);font-weight:800;">- ${fmtCurrency(d.amount)}</span>
+        </div>`).join('')}
+    </div>` : ''}
+
+    <!-- Pending requests notice -->
+    ${pendingReqs.length > 0 ? `
+    <div class="card">
+      <div class="card-header"><span class="card-title">⏳ طلبات قيد الانتظار</span></div>
+      ${pendingReqs.map(r=>{
+        const typeLabel = r.type==='loan' ? `💰 سلفة ${fmtCurrency(r.amount)}`
+          : r.type==='leave_full' ? `📅 إجازة يوم كامل (${r.from})`
+          : `⏱️ إجازة زمنية (${r.date})`;
+        const noteLabel = r.type==='loan'
+          ? 'إذا وافق المدير تُضاف كدين على راتبك'
+          : r.type==='leave_full'
+          ? 'إذا رفض المدير يُخصم من راتبك'
+          : 'لا تأثير مالي';
+        return `<div style="display:flex;align-items:center;justify-content:space-between;padding:11px 16px;border-bottom:1px solid rgba(255,255,255,0.03);gap:8px;flex-wrap:wrap;">
+          <div>
+            <div style="font-size:0.82rem;font-weight:700;">${typeLabel}</div>
+            <div style="font-size:0.72rem;color:var(--text3);margin-top:2px;">${noteLabel}</div>
+          </div>
+          <span class="badge b-gold">⏳ قيد الانتظار</span>
+        </div>`;
+      }).join('')}
+    </div>` : ''}
+  `;
+}
+document.getElementById('lf-from').value = todayStr();
+document.getElementById('lf-to').value = todayStr();
+document.getElementById('lt-date').value = todayStr();
+document.getElementById('ne-id').value = 'EMP' + String(DB.employees.length + 1).padStart(3,'0');
+// Service Worker
+if('serviceWorker' in navigator){
+  navigator.serviceWorker.register('sw.js').catch(()=>{});
+}
+</script>
+</body>
+</html>
