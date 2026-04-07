@@ -1143,6 +1143,49 @@ function formatSheetTime(t){
   return s;
 }
 
+function fixDate(v){
+  if(!v) return '';
+  if(typeof v === 'string'){
+    // Already formatted YYYY-MM-DD
+    const m = v.match(/(\d{4})-(\d{2})-(\d{2})/);
+    if(m) return m[0];
+    // ISO string
+    const iso = v.match(/(\d{4}-\d{2}-\d{2})/);
+    if(iso) return iso[0];
+  }
+  if(v instanceof Date || (typeof v === 'object' && v.getFullYear)){
+    try {
+      const d = new Date(v);
+      return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+    } catch(e){}
+  }
+  const s = String(v);
+  const m2 = s.match(/(\d{4})-(\d{2})-(\d{2})/);
+  if(m2) return m2[0];
+  return s;
+}
+
+function fixTime(v){
+  if(!v) return '';
+  if(typeof v === 'string'){
+    // Already HH:MM
+    const m = v.match(/(\d{1,2}):(\d{2})/);
+    if(m) return String(parseInt(m[1])).padStart(2,'0')+':'+m[2];
+    // ISO string like 1899-12-30T06:42:24.000Z
+    const iso = v.match(/T(\d{2}):(\d{2})/);
+    if(iso){
+      // Convert UTC to local (Iraq UTC+3)
+      const h = (parseInt(iso[1]) + 3) % 24;
+      return String(h).padStart(2,'0')+':'+iso[2];
+    }
+  }
+  if(typeof v === 'number' && v > 0 && v < 1){
+    const totalMins = Math.round(v * 24 * 60);
+    return String(Math.floor(totalMins/60)).padStart(2,'0')+':'+String(totalMins%60).padStart(2,'0');
+  }
+  return String(v);
+}
+
 function sheetsToDB(data) {
   // employees
   DB.employees = (data.employees||[]).map(r => ({
@@ -1157,8 +1200,10 @@ function sheetsToDB(data) {
   // attendance
   DB.attendance = (data.attendance||[]).map(r => ({
     empId: r['رقم الموظف'], empName: r['اسم الموظف'],
-    date: r['التاريخ'], inTime: r['وقت الدخول'],
-    outTime: r['وقت الخروج']||null, shiftNum: parseInt(r['رقم الشفت'])||1,
+    date: fixDate(r['التاريخ']),
+    inTime: fixTime(r['وقت الدخول']),
+    outTime: r['وقت الخروج'] ? fixTime(r['وقت الخروج']) : null,
+    shiftNum: parseInt(r['رقم الشفت'])||1,
     status: r['الحالة']||'present', lateMin: parseInt(r['دقائق التأخير'])||0,
     lat: String(r['خط العرض']||''), lng: String(r['خط الطول']||''), location: String(r['الموقع']||'')
   }));
